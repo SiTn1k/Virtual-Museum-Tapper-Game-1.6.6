@@ -53,7 +53,7 @@ interface OpenChestResponse {
   chest_type?: string;
 }
 
-// Artifact definitions (must match epochs.ts)
+// Artifact definitions — MUST MATCH epochs.ts frontend exactly
 const ARTIFACTS: Array<{
   id: string;
   epoch: string;
@@ -64,35 +64,32 @@ const ARTIFACTS: Array<{
   name: { ua: string; en: string };
   requiredPrestige?: number;
 }> = [
+  // Ukrainian Artifacts (Epochs 1-12)
   // Trypillia
-  { id: "trypillia_bull", epoch: "trypillia", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.05 }, icon: "🐂", name: { ua: "Бик-бикален", en: "Bull Idol" } },
-  { id: "trypillia_pot", epoch: "trypillia", rarity: "rare", parts: 10, bonus: { type: "passive_boost", value: 1.10 }, icon: "🏺", name: { ua: "Трипільська піала", en: "Trypillian Bowl" } },
-  { id: "trypillia_goddess", epoch: "trypillia", rarity: "legendary", parts: 10, bonus: { type: "passive_boost", value: 1.20 }, icon: "👸", name: { ua: "Богиня-Мати", en: "Mother Goddess" } },
+  { id: "trypillia_vase", epoch: "trypillia", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.05 }, icon: "🏺", name: { ua: "Трипільський посуд", en: "Trypillian Vessel" } },
+  { id: "trypillia_idol", epoch: "trypillia", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.10 }, icon: "🕉️", name: { ua: "Богиня-Мати", en: "Mother Goddess" } },
   // Scythia
-  { id: "scythia_arrow", epoch: "scythia", rarity: "common", parts: 10, bonus: { type: "xp_multiplier", value: 1.05 }, icon: "🏹", name: { ua: "Скіфська стріла", en: "Scythian Arrow" } },
-  { id: "scythia_rhyton", epoch: "scythia", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.10 }, icon: "🎺", name: { ua: "Золотий ритон", en: "Golden Rhyton" } },
-  { id: "scythia_gold", epoch: "scythia", rarity: "legendary", parts: 10, bonus: { type: "xp_multiplier", value: 1.20 }, icon: "👑", name: { ua: "Золота пектораль", en: "Golden Pectoral" } },
+  { id: "scythian_gold", epoch: "scythia", rarity: "common", parts: 10, bonus: { type: "currency_multiplier", value: 1.05 }, icon: "💰", name: { ua: "Скіфське золото", en: "Scythian Gold" } },
+  { id: "scythian_sword", epoch: "scythia", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.10 }, icon: "⚔️", name: { ua: "Скіфський меч", en: "Scythian Sword" } },
+  { id: "scythian_amulet", epoch: "scythia", rarity: "legendary", parts: 10, bonus: { type: "passive_boost", value: 1.15 }, icon: "🦌", name: { ua: "Золотий олень", en: "Golden Stag" } },
   // Antiquity
-  { id: "antiquity_amphora", epoch: "antiquity", rarity: "common", parts: 10, bonus: { type: "currency_multiplier", value: 1.05 }, icon: "🏺", name: { ua: "Грецька амфора", en: "Greek Amphora" } },
-  { id: "antiquity_coin", epoch: "antiquity", rarity: "rare", parts: 10, bonus: { type: "currency_multiplier", value: 1.10 }, icon: "🪙", name: { ua: "Ольвійська монета", en: "Olbian Coin" } },
-  { id: "antiquity_statue", epoch: "antiquity", rarity: "legendary", parts: 10, bonus: { type: "currency_multiplier", value: 1.20 }, icon: "🏛", name: { ua: "Статуя Аполлона", en: "Apollo Statue" } },
+  { id: "greek_coin", epoch: "antiquity", rarity: "common", parts: 10, bonus: { type: "currency_multiplier", value: 1.05 }, icon: "🪙", name: { ua: "Грецька монета", en: "Greek Coin" } },
+  { id: "greek_amphora", epoch: "antiquity", rarity: "rare", parts: 10, bonus: { type: "passive_boost", value: 1.08 }, icon: "🏺", name: { ua: "Глек для вина", en: "Wine Amphora" } },
+  { id: "chersonesus_coin", epoch: "antiquity", rarity: "epic", parts: 10, bonus: { type: "xp_multiplier", value: 1.12 }, icon: "🪙", name: { ua: "Херсонеська монета", en: "Chersonesus Coin" } },
   // Kyiv Rus
-  { id: "kyiv_icon", epoch: "kyiv_rus", rarity: "common", parts: 10, bonus: { type: "xp_multiplier", value: 1.06 }, icon: "🖼", name: { ua: "Ікона", en: "Icon" } },
-  { id: "kyiv_reliquary", epoch: "kyiv_rus", rarity: "epic", parts: 10, bonus: { type: "passive_boost", value: 1.12 }, icon: "☦️", name: { ua: "Мощі Святих", en: "Saints Relics" } },
-  { id: "kyiv_gospels", epoch: "kyiv_rus", rarity: "legendary", parts: 10, bonus: { type: "currency_multiplier", value: 1.20 }, icon: "📖", name: { ua: "Остромирове Євангеліє", en: "Ostromir Gospels" } },
+  { id: "rus_currency", epoch: "kyiv_rus", rarity: "common", parts: 10, bonus: { type: "currency_multiplier", value: 1.05 }, icon: "₴", name: { ua: "Київська гривня", en: "Kyivan Hryvnia" } },
+  { id: "sophia_icon", epoch: "kyiv_rus", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.10 }, icon: "☦️", name: { ua: "Ікона Софії", en: "Sophia Icon" } },
+  { id: "yaroslav_book", epoch: "kyiv_rus", rarity: "legendary", parts: 10, bonus: { type: "passive_boost", value: 1.15 }, icon: "📜", name: { ua: "Закон Ярослава", en: "Yaroslav's Law" } },
   // Halych-Volhynia
-  { id: "halych_seal", epoch: "halych_volhynia", rarity: "rare", parts: 10, bonus: { type: "currency_multiplier", value: 1.10 }, icon: "🔖", name: { ua: "Печать князя", en: "Prince's Seal" } },
-  { id: "halych_crown", epoch: "halych_volhynia", rarity: "legendary", parts: 10, bonus: { type: "currency_multiplier", value: 1.20 }, icon: "👑", name: { ua: "Корона Данила", en: "Danylo's Crown" } },
+  { id: "galician_salt", epoch: "halych_volhynia", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.05 }, icon: "🧂", name: { ua: "Галицька сель", en: "Galician Salt" } },
+  { id: "danylo_charter", epoch: "halych_volhynia", rarity: "rare", parts: 10, bonus: { type: "currency_multiplier", value: 1.10 }, icon: "📜", name: { ua: "Грамота Данила", en: "Danylo Charter" } },
   // Polish-Lithuanian
-  { id: "polish_sword", epoch: "polish_lithuanian", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.10 }, icon: "⚔️", name: { ua: "Рицарський меч", en: "Knight Sword" } },
-  { id: "polish_crown", epoch: "polish_lithuanian", rarity: "legendary", parts: 10, bonus: { type: "passive_boost", value: 1.18 }, icon: "👑", name: { ua: "Корона короля", en: "King's Crown" } },
+  { id: "sich_medal", epoch: "polish_lithuanian", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.05 }, icon: "🏅", name: { ua: "Медаль Січі", en: "Sich Medal" } },
   // Cossack
-  { id: "cossack_pistol", epoch: "cossack", rarity: "common", parts: 10, bonus: { type: "xp_multiplier", value: 1.06 }, icon: "🔫", name: { ua: "Козацький пістоль", en: "Cossack Pistol" } },
-  { id: "cossack_flag", epoch: "cossack", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.12 }, icon: "🚩", name: { ua: "Козацький прапор", en: "Cossack Banner" } },
+  { id: "cossack_banner", epoch: "cossack", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.12 }, icon: "🚩", name: { ua: "Козацький прапор", en: "Cossack Banner" } },
   { id: "cossack_mace", epoch: "cossack", rarity: "legendary", parts: 10, bonus: { type: "xp_multiplier", value: 1.20 }, icon: "🏏", name: { ua: "Булава Богдана", en: "Bohdan's Mace" } },
   // Hetmanate
   { id: "hetman_seal", epoch: "hetmanate", rarity: "rare", parts: 10, bonus: { type: "currency_multiplier", value: 1.12 }, icon: "🔏", name: { ua: "Печать гетьмана", en: "Hetman's Seal" } },
-  { id: "hetman_charter", epoch: "hetmanate", rarity: "legendary", parts: 10, bonus: { type: "currency_multiplier", value: 1.20 }, icon: "📜", name: { ua: "Гетьманська грамота", en: "Hetman Charter" } },
   // Empire
   { id: "empire_medal", epoch: "empire", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.06 }, icon: "🏅", name: { ua: "Імперська медаль", en: "Imperial Medal" } },
   { id: "empire_factory", epoch: "empire", rarity: "rare", parts: 10, bonus: { type: "passive_boost", value: 1.12 }, icon: "🏭", name: { ua: "Заводський знак", en: "Factory Badge" } },
@@ -101,30 +98,70 @@ const ARTIFACTS: Array<{
   { id: "revolution_flag", epoch: "revolution", rarity: "legendary", parts: 10, bonus: { type: "xp_multiplier", value: 1.20 }, icon: "🇺🇦", name: { ua: "Прапор УНР", en: "UNR Flag" } },
   // Soviet
   { id: "soviet_badge", epoch: "soviet", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.06 }, icon: "⭐", name: { ua: "Радянський значок", en: "Soviet Badge" } },
-  { id: "soviet_anthem", epoch: "soviet", rarity: "rare", parts: 10, bonus: { type: "currency_multiplier", value: 1.10 }, icon: "🎵", name: { ua: "Ноти гімну УРСР", en: "USSR Anthem Notes" } },
   { id: "soviet_rocket", epoch: "soviet", rarity: "epic", parts: 10, bonus: { type: "passive_boost", value: 1.15 }, icon: "🚀", name: { ua: "Модель ракети", en: "Rocket Model" } },
   // Independence
   { id: "ind_flag", epoch: "independence", rarity: "common", parts: 10, bonus: { type: "xp_multiplier", value: 1.08 }, icon: "🇺🇦", name: { ua: "Національний прапор", en: "National Flag" } },
-  { id: "ind_passport", epoch: "independence", rarity: "rare", parts: 10, bonus: { type: "currency_multiplier", value: 1.12 }, icon: "🎫", name: { ua: "Перший паспорт", en: "First Passport" } },
   { id: "ind_constitution", epoch: "independence", rarity: "legendary", parts: 10, bonus: { type: "passive_boost", value: 1.20 }, icon: "📜", name: { ua: "Конституція", en: "Constitution" } },
-  // Secret artifacts (Prestige 1+)
-  { id: "secret_trypillia_altar", epoch: "trypillia", rarity: "secret", parts: 15, bonus: { type: "passive_boost", value: 1.15 }, icon: "🔥", name: { ua: "Трипільський жертовник", en: "Trypillian Altar" }, requiredPrestige: 1 },
-  { id: "secret_scythia_treasure", epoch: "scythia", rarity: "secret", parts: 15, bonus: { type: "xp_multiplier", value: 1.15 }, icon: "💎", name: { ua: "Скарб Скіфії", en: "Scythian Treasure" }, requiredPrestige: 1 },
-  { id: "secret_antiquity_oracle", epoch: "antiquity", rarity: "secret", parts: 15, bonus: { type: "currency_multiplier", value: 1.15 }, icon: "🔮", name: { ua: "Оракул Аполлона", en: "Apollo Oracle" }, requiredPrestige: 1 },
-  { id: "secret_kyiv_relic", epoch: "kyiv_rus", rarity: "secret", parts: 15, bonus: { type: "xp_multiplier", value: 1.16 }, icon: "✝️", name: { ua: "Мощі Володимира", en: "Vladimir Relics" }, requiredPrestige: 1 },
-  { id: "secret_halych_throne", epoch: "halych_volhynia", rarity: "secret", parts: 15, bonus: { type: "currency_multiplier", value: 1.17 }, icon: "🪑", name: { ua: "Трон Данила", en: "Danylo's Throne" }, requiredPrestige: 1 },
-  { id: "secret_cossack_hetman_mace", epoch: "cossack", rarity: "secret", parts: 15, bonus: { type: "xp_multiplier", value: 1.18 }, icon: "⚔️", name: { ua: "Булава Хмельницького", en: "Khmelnytsky's Mace" }, requiredPrestige: 1 },
-  { id: "secret_hetman_oriflamma", epoch: "hetmanate", rarity: "secret", parts: 15, bonus: { type: "passive_boost", value: 1.17 }, icon: "🚩", name: { ua: "Оріфлама Гетьманщини", en: "Hetmanate Oriflamme" }, requiredPrestige: 1 },
-  { id: "secret_empire_factory_secret", epoch: "empire", rarity: "secret", parts: 15, bonus: { type: "passive_boost", value: 1.16 }, icon: "⚙️", name: { ua: "Секрет заводу", en: "Factory Secret" }, requiredPrestige: 1 },
-  { id: "secret_revolution_manifest", epoch: "revolution", rarity: "secret", parts: 15, bonus: { type: "xp_multiplier", value: 1.18 }, icon: "📜", name: { ua: "Маніфест УНР", en: "UNR Manifest" }, requiredPrestige: 1 },
-  { id: "secret_soviet_space_secret", epoch: "soviet", rarity: "secret", parts: 15, bonus: { type: "passive_boost", value: 1.18 }, icon: "🌌", name: { ua: "Таємниця космосу", en: "Space Secret" }, requiredPrestige: 1 },
-  { id: "secret_independence_charter", epoch: "independence", rarity: "secret", parts: 15, bonus: { type: "currency_multiplier", value: 1.20 }, icon: "🇺🇦", name: { ua: "Акт Незалежності", en: "Independence Act" }, requiredPrestige: 1 },
-  // Prestige 2+ secrets
-  { id: "secret_golden_fleece", epoch: "scythia", rarity: "secret", parts: 20, bonus: { type: "xp_multiplier", value: 1.19 }, icon: "🌟", name: { ua: "Золоте руно", en: "Golden Fleece" }, requiredPrestige: 2 },
-  { id: "secret_kyiv_sophia_secret", epoch: "kyiv_rus", rarity: "secret", parts: 20, bonus: { type: "passive_boost", value: 1.19 }, icon: "⛪", name: { ua: "Таємниця Софії", en: "Sophia Secret" }, requiredPrestige: 2 },
-  { id: "secret_cossack_constitution", epoch: "cossack", rarity: "secret", parts: 20, bonus: { type: "currency_multiplier", value: 1.19 }, icon: "📖", name: { ua: "Конституція Пилипа", en: "Pylyp's Constitution" }, requiredPrestige: 2 },
-  // Prestige 3+ secrets
-  { id: "secret_modern_constitution_1996", epoch: "independence", rarity: "secret", parts: 20, bonus: { type: "xp_multiplier", value: 1.20 }, icon: "⚖️", name: { ua: "Конституція 1996", en: "1996 Constitution" }, requiredPrestige: 3 },
+
+  // SIT STUDIO EASTER EGG — secret rarity, epoch independence
+  { id: "sit_s", epoch: "independence", rarity: "secret", parts: 1, bonus: { type: "xp_multiplier", value: 1.01 }, icon: "🔮" },
+  { id: "sit_i", epoch: "independence", rarity: "secret", parts: 1, bonus: { type: "xp_multiplier", value: 1.01 }, icon: "🔮" },
+  { id: "sit_t", epoch: "independence", rarity: "secret", parts: 1, bonus: { type: "xp_multiplier", value: 1.01 }, icon: "🔮" },
+  { id: "sit_space", epoch: "independence", rarity: "secret", parts: 1, bonus: { type: "xp_multiplier", value: 1.01 }, icon: "✨" },
+  { id: "sit_u", epoch: "independence", rarity: "secret", parts: 1, bonus: { type: "xp_multiplier", value: 1.01 }, icon: "🔮" },
+  { id: "sit_d", epoch: "independence", rarity: "secret", parts: 1, bonus: { type: "xp_multiplier", value: 1.01 }, icon: "🔮" },
+  { id: "sit_o", epoch: "independence", rarity: "secret", parts: 1, bonus: { type: "xp_multiplier", value: 1.01 }, icon: "🔮" },
+
+  // Ukrainian Secret Artifacts (Prestige 1+)
+  { id: "secret_pyramid", epoch: "egypt", rarity: "secret", parts: 15, bonus: { type: "xp_multiplier", value: 1.15 }, icon: "🔺", requiredPrestige: 1 },
+  { id: "secret_parthenon", epoch: "greece", rarity: "secret", parts: 15, bonus: { type: "currency_multiplier", value: 1.16 }, icon: "🏛️", requiredPrestige: 1 },
+  { id: "secret_colosseum", epoch: "rome", rarity: "secret", parts: 15, bonus: { type: "passive_boost", value: 1.17 }, icon: "🏟️", requiredPrestige: 2 },
+  { id: "secret_crusade", epoch: "medieval", rarity: "secret", parts: 15, bonus: { type: "xp_multiplier", value: 1.18 }, icon: "⚔️", requiredPrestige: 2 },
+  { id: "secret_mona", epoch: "renaissance", rarity: "secret", parts: 15, bonus: { type: "currency_multiplier", value: 1.18 }, icon: "🎨", requiredPrestige: 3 },
+  { id: "secret_enlightenment", epoch: "enlightenment", rarity: "secret", parts: 15, bonus: { type: "passive_boost", value: 1.19 }, icon: "💡", requiredPrestige: 3 },
+  { id: "secret_industrial", epoch: "victorian", rarity: "secret", parts: 15, bonus: { type: "xp_multiplier", value: 1.19 }, icon: "⚙️", requiredPrestige: 4 },
+  { id: "secret_digital", epoch: "modern_world", rarity: "secret", parts: 15, bonus: { type: "currency_multiplier", value: 1.20 }, icon: "🌐", requiredPrestige: 5 },
+
+  // World History Artifacts (Egypt)
+  { id: "egypt_scarab", epoch: "egypt", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.06 }, icon: "🪲", name: { ua: "Скарабей", en: "Scarab" } },
+  { id: "egypt_pyramid_model", epoch: "egypt", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.10 }, icon: "🔺", name: { ua: "Модель піраміди", en: "Pyramid Model" } },
+  { id: "egypt_nefertiti", epoch: "egypt", rarity: "epic", parts: 10, bonus: { type: "passive_boost", value: 1.14 }, icon: "👸", name: { ua: "Нефертіті", en: "Nefertiti Bust" } },
+  { id: "egypt_tutankhamun", epoch: "egypt", rarity: "legendary", parts: 10, bonus: { type: "currency_multiplier", value: 1.20 }, icon: "👑", name: { ua: "Маска Тутанхамона", en: "Tutankhamun Mask" } },
+  // Greece
+  { id: "greece_olive", epoch: "greece", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.06 }, icon: "🫒", name: { ua: "Оливкова гілка", en: "Olive Branch" } },
+  { id: "greece_trophy", epoch: "greece", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.10 }, icon: "🏆", name: { ua: "Олімпійський кубок", en: "Olympic Trophy" } },
+  { id: "greece_philosopher", epoch: "greece", rarity: "epic", parts: 10, bonus: { type: "passive_boost", value: 1.14 }, icon: "📜", name: { ua: "Праці Платона", en: "Plato's Works" } },
+  { id: "greece_alexander", epoch: "greece", rarity: "legendary", parts: 10, bonus: { type: "xp_multiplier", value: 1.20 }, icon: "⚔️", name: { ua: "Меч Олександра", en: "Alexander's Sword" } },
+  // Rome
+  { id: "rome_gladius", epoch: "rome", rarity: "common", parts: 10, bonus: { type: "xp_multiplier", value: 1.06 }, icon: "⚔️", name: { ua: "Гладіус", en: "Gladius" } },
+  { id: "rome_aquila", epoch: "rome", rarity: "rare", parts: 10, bonus: { type: "passive_boost", value: 1.10 }, icon: "🦅", name: { ua: "Римський орел", en: "Roman Aquila" } },
+  { id: "rome_senate", epoch: "rome", rarity: "epic", parts: 10, bonus: { type: "currency_multiplier", value: 1.14 }, icon: "🏛️", name: { ua: "Сенатська мантія", en: "Senate Toga" } },
+  { id: "rome_caesar", epoch: "rome", rarity: "legendary", parts: 10, bonus: { type: "xp_multiplier", value: 1.20 }, icon: "👑", name: { ua: "Лавр цезаря", en: "Caesar's Laurel" } },
+  // Medieval
+  { id: "medieval_cross", epoch: "medieval", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.06 }, icon: "✝️", name: { ua: "Хрестоносний хрест", en: "Crusader Cross" } },
+  { id: "medieval_sword", epoch: "medieval", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.10 }, icon: "🗡️", name: { ua: "Меч лицаря", en: "Knight's Sword" } },
+  { id: "medieval_holy_grail", epoch: "medieval", rarity: "epic", parts: 10, bonus: { type: "passive_boost", value: 1.14 }, icon: "🏆", name: { ua: "Святий Грааль", en: "Holy Grail" } },
+  { id: "medieval_king_crown", epoch: "medieval", rarity: "legendary", parts: 10, bonus: { type: "currency_multiplier", value: 1.20 }, icon: "👑", name: { ua: "Корона короля Артура", en: "King Arthur's Crown" } },
+  // Renaissance
+  { id: "renaissance_palette", epoch: "renaissance", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.07 }, icon: "🎨", name: { ua: "Палітра художника", en: "Artist's Palette" } },
+  { id: "renaissance_manuscript", epoch: "renaissance", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.10 }, icon: "📖", name: { ua: "Ілюмінований манускрипт", en: "Illuminated Manuscript" } },
+  { id: "renaissance_mona_lisa", epoch: "renaissance", rarity: "epic", parts: 10, bonus: { type: "currency_multiplier", value: 1.14 }, icon: "🖼️", name: { ua: "Мона Ліза", en: "Mona Lisa" } },
+  { id: "renaissance_davinci", epoch: "renaissance", rarity: "legendary", parts: 10, bonus: { type: "xp_multiplier", value: 1.20 }, icon: "✍️", name: { ua: "Кодекс Леонардо", en: "Leonardo's Codex" } },
+  // Enlightenment
+  { id: "enlightenment_book", epoch: "enlightenment", rarity: "common", parts: 10, bonus: { type: "xp_multiplier", value: 1.07 }, icon: "📚", name: { ua: "Енциклопедія", en: "Encyclopedia" } },
+  { id: "enlightenment_compass", epoch: "enlightenment", rarity: "rare", parts: 10, bonus: { type: "passive_boost", value: 1.10 }, icon: "🧭", name: { ua: "Науковий компас", en: "Scientific Compass" } },
+  { id: "enlightenment_declaration", epoch: "enlightenment", rarity: "epic", parts: 10, bonus: { type: "currency_multiplier", value: 1.14 }, icon: "📜", name: { ua: "Декларація прав", en: "Declaration of Rights" } },
+  { id: "enlightenment_foundation", epoch: "enlightenment", rarity: "legendary", parts: 10, bonus: { type: "xp_multiplier", value: 1.20 }, icon: "🏛️", name: { ua: "Академія наук", en: "Academy of Sciences" } },
+  // Victorian
+  { id: "victorian_clock", epoch: "victorian", rarity: "common", parts: 10, bonus: { type: "passive_boost", value: 1.07 }, icon: "🕰️", name: { ua: "Вікторіанський годинник", en: "Victorian Clock" } },
+  { id: "victorian_steam", epoch: "victorian", rarity: "rare", parts: 10, bonus: { type: "xp_multiplier", value: 1.10 }, icon: "⚙️", name: { ua: "Паровий двигун", en: "Steam Engine" } },
+  { id: "victorian_telegraph", epoch: "victorian", rarity: "epic", parts: 10, bonus: { type: "currency_multiplier", value: 1.14 }, icon: "📞", name: { ua: "Телеграф", en: "Telegraph" } },
+  { id: "victorian_empire_crown", epoch: "victorian", rarity: "legendary", parts: 10, bonus: { type: "xp_multiplier", value: 1.20 }, icon: "👑", name: { ua: "Корона імперії", en: "Empire Crown" } },
+  // Modern World
+  { id: "modern_computer", epoch: "modern_world", rarity: "common", parts: 10, bonus: { type: "xp_multiplier", value: 1.08 }, icon: "💻", name: { ua: "Персональний комп'ютер", en: "Personal Computer" } },
+  { id: "modern_internet", epoch: "modern_world", rarity: "rare", parts: 10, bonus: { type: "passive_boost", value: 1.12 }, icon: "🌐", name: { ua: "Інтернет", en: "Internet" } },
+  { id: "modern_smartphone", epoch: "modern_world", rarity: "epic", parts: 10, bonus: { type: "currency_multiplier", value: 1.15 }, icon: "📱", name: { ua: "Смартфон", en: "Smartphone" } },
+  { id: "modern_ai_chip", epoch: "modern_world", rarity: "legendary", parts: 10, bonus: { type: "xp_multiplier", value: 1.22 }, icon: "🤖", name: { ua: "AI чіп", en: "AI Chip" } },
 ];
 
 function jsonResponse(data: OpenChestResponse | { error: string }, status = 200) {

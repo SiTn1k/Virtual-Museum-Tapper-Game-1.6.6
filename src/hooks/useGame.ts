@@ -906,8 +906,8 @@ export function useGame() {
         prestigeLevel: data.prestige_level,
         prestigePoints: data.total_prestige_points,
         // Energy reset to full
-        energy: 100,
-        maxEnergy: 100,
+        energy: 1000,
+        maxEnergy: 1000,
         lastSavedAt: Date.now(),
         lastOnlineAt: Date.now(),
         sessionStartAt: Date.now(),

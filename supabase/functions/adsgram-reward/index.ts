@@ -65,15 +65,18 @@ async function grantXpBoost(supabase: ReturnType<typeof createClient>, telegramI
   const boosters = (row.active_boosters as Record<string, unknown>) || {};
   const now = Date.now();
 
-  // Check if x3 boost is already active
+  // Check if x3 boost is already active (with 60-second grace period to allow refresh when nearly expired)
+  const GRACE_PERIOD_MS = 60_000; // 60 seconds - allows user to claim new boost when old one has < 60s left
   const existingEnd = boosters.xp_boost_end as number | undefined;
   const existingMult = boosters.xp_boost_mult as number | undefined;
 
-  if (existingEnd && existingEnd > now && existingMult && existingMult >= XP_BOOST_MULTIPLIER) {
+  const isActiveAndNotExpiringSoon = existingEnd && existingEnd > now && existingMult && existingMult >= XP_BOOST_MULTIPLIER && (existingEnd - now) > GRACE_PERIOD_MS;
+
+  if (isActiveAndNotExpiringSoon) {
     return { ok: false, error: "XP boost already active", already_active: true };
   }
 
-  // Set fresh 30 minute boost
+  // Set fresh 30 minute boost (even if old one still has < 60s remaining)
   const newEnd = now + XP_BOOST_DURATION_MS;
 
   // Update boosters - preserve other boosters
