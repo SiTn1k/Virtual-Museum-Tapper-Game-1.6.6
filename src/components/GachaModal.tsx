@@ -41,6 +41,77 @@ const ROLL_INTERVAL_MS = 60;
 
 const ROLL_ICONS = ['🎁', '✨', '💎', '🏺', '👑', '⚔️', '☦️', '📜', '🪙', '🎭'];
 
+// Enhanced rarity styles with glow effects
+const RARITY_STYLES: Record<string, { 
+  color: string; 
+  glow: string;
+  borderColor: string;
+  bgGradient: string;
+  particleColor: string;
+}> = {
+  secret: { 
+    color: 'text-pink-400', 
+    glow: 'drop-shadow-[0_0_30px_rgba(236,72,153,0.8)] animate-rarity-glow',
+    borderColor: 'border-pink-500/60',
+    bgGradient: 'from-pink-900/60 to-purple-900/60',
+    particleColor: 'bg-pink-400'
+  },
+  legendary: { 
+    color: 'text-yellow-400', 
+    glow: 'drop-shadow-[0_0_30px_rgba(234,179,8,0.8)] animate-rarity-glow',
+    borderColor: 'border-yellow-500/60',
+    bgGradient: 'from-yellow-900/60 to-amber-900/60',
+    particleColor: 'bg-yellow-400'
+  },
+  epic: { 
+    color: 'text-purple-400', 
+    glow: 'drop-shadow-[0_0_25px_rgba(168,85,247,0.7)] animate-rarity-glow',
+    borderColor: 'border-purple-500/60',
+    bgGradient: 'from-purple-900/60 to-pink-900/60',
+    particleColor: 'bg-purple-400'
+  },
+  rare: { 
+    color: 'text-blue-400', 
+    glow: 'drop-shadow-[0_0_20px_rgba(59,130,246,0.6)]',
+    borderColor: 'border-blue-500/50',
+    bgGradient: 'from-blue-900/60 to-cyan-900/60',
+    particleColor: 'bg-blue-400'
+  },
+  common: { 
+    color: 'text-gray-300', 
+    glow: '',
+    borderColor: 'border-gray-500/40',
+    bgGradient: 'from-gray-800/60 to-gray-700/60',
+    particleColor: 'bg-gray-400'
+  },
+};
+
+// Rarity particle burst for celebration
+function RarityParticles({ rarity, show }: { rarity: string; show: boolean }) {
+  const style = RARITY_STYLES[rarity] || RARITY_STYLES.common;
+  
+  if (!show) return null;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden">
+      {[...Array(12)].map((_, i) => (
+        <div
+          key={i}
+          className={`absolute w-2 h-2 ${style.particleColor} rounded-full animate-float-up`}
+          style={{
+            left: '50%',
+            top: '50%',
+            animationDelay: `${i * 0.05}s`,
+            animationDuration: '1s',
+            transform: `rotate(${i * 30}deg) translateY(-20px)`,
+            opacity: 0.8,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export function GachaModal({
   epoch,
   currency,
@@ -61,6 +132,7 @@ export function GachaModal({
   const [rewards, setRewards] = useState<GachaReward[]>([]);
   const [primaryReward, setPrimaryReward] = useState<GachaReward | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showParticles, setShowParticles] = useState(false);
 
   const pendingRewardsRef = useRef<GachaReward[] | null>(null);
   const onServerRewardRef = useRef(onServerReward);
@@ -87,6 +159,7 @@ export function GachaModal({
     setRewards([]);
     setPrimaryReward(null);
     setErrorMessage('');
+    setShowParticles(false);
     setPhase('rolling');
 
     // Call server for the actual reward
@@ -133,6 +206,8 @@ export function GachaModal({
           const primary = resultRewards[0];
           setCurrentIcon(primary.icon);
           onServerRewardRef.current(resultRewards);
+          // Show particles on reveal
+          setShowParticles(true);
         }
 
         setPhase('result');
@@ -149,18 +224,7 @@ export function GachaModal({
   }, []);
 
   const getRarityStyle = (rarity: string) => {
-    switch (rarity) {
-      case 'secret':
-        return { color: 'text-pink-400', glow: 'drop-shadow-[0_0_25px_rgba(236,72,153,0.6)]' };
-      case 'legendary':
-        return { color: 'text-yellow-400', glow: 'drop-shadow-[0_0_20px_rgba(234,179,8,0.5)]' };
-      case 'epic':
-        return { color: 'text-purple-400', glow: 'drop-shadow-[0_0_15px_rgba(168,85,247,0.4)]' };
-      case 'rare':
-        return { color: 'text-blue-400', glow: 'drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]' };
-      default:
-        return { color: 'text-gray-300', glow: '' };
-    }
+    return RARITY_STYLES[rarity] || RARITY_STYLES.common;
   };
 
   const rarityLabels: Record<string, string> = {
@@ -226,11 +290,14 @@ export function GachaModal({
         </div>
 
         {/* Main content */}
-        <div className="flex flex-col items-center justify-center py-8 px-4 min-h-[220px]">
+        <div className="flex flex-col items-center justify-center py-8 px-4 min-h-[220px] relative">
+          {/* Rarity particles on reveal */}
+          <RarityParticles rarity={primaryReward?.rarity || 'common'} show={showParticles && phase === 'result'} />
+          
           <div
-            className={`text-8xl transition-all duration-300 select-none ${
+            className={`text-8xl transition-all duration-300 select-none relative z-10 ${
               phase === 'rolling' ? 'animate-bounce' : ''
-            } ${phase === 'result' && primaryReward ? getRarityStyle(primaryReward.rarity).glow + ' scale-125' : ''}`}
+            } ${phase === 'result' && primaryReward ? `${getRarityStyle(primaryReward.rarity).glow} scale-125` : ''}`}
           >
             {phase === 'error' ? '❌' : currentIcon}
           </div>
@@ -388,6 +455,7 @@ export function GachaModal({
                   setPhase('ready');
                   setRewards([]);
                   setPrimaryReward(null);
+                  setShowParticles(false);
                   setCurrentIcon('🎁');
                 }}
                 disabled={currency < gachaCost || !hasArtifacts}

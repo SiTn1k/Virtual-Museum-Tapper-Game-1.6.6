@@ -18,20 +18,31 @@ interface TapAreaProps {
   topOffset?: number;
 }
 
-// Particle effect component
+// ═══════════════════════════════════════════════════════════════════════════
+// PARTICLE EFFECT - Enhanced with spring physics
+// ═══════════════════════════════════════════════════════════════════════════
 function TapParticle({ x, y, value, onComplete }: { x: number; y: number; value: number; onComplete: () => void }) {
   const [opacity, setOpacity] = useState(1);
   const [scale, setScale] = useState(1);
   const [offsetY, setOffsetY] = useState(0);
+  const [rotation, setRotation] = useState(0);
 
   useEffect(() => {
     let frame = 0;
+    const totalFrames = 45;
+    
     const animate = () => {
       frame++;
-      setOpacity(1 - frame / 40);
-      setScale(1 + frame / 30);
-      setOffsetY(-frame * 1.5);
-      if (frame < 40) {
+      // Spring-like easing curve
+      const progress = frame / totalFrames;
+      const springProgress = 1 - Math.pow(1 - progress, 3);
+      
+      setOpacity(1 - springProgress);
+      setScale(1 + springProgress * 0.8);
+      setOffsetY(-frame * 2.2);
+      setRotation(frame * 3);
+      
+      if (frame < totalFrames) {
         requestAnimationFrame(animate);
       } else {
         onComplete();
@@ -41,6 +52,7 @@ function TapParticle({ x, y, value, onComplete }: { x: number; y: number; value:
   }, [onComplete]);
 
   const isBig = value >= 100;
+  const isHuge = value >= 1000;
 
   return (
     <div
@@ -48,36 +60,45 @@ function TapParticle({ x, y, value, onComplete }: { x: number; y: number; value:
       style={{
         left: x,
         top: y + offsetY,
-        transform: `translate(-50%, -50%) scale(${scale})`,
+        transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotation}deg)`,
         opacity,
         zIndex: 100,
       }}
     >
-      <div className={`${isBig ? 'text-yellow-300' : 'text-white'} ${isBig ? 'text-3xl' : 'text-xl'} font-black drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]`}>
-        +{value}
+      <div className={`${isHuge ? 'text-yellow-300' : isBig ? 'text-yellow-200' : 'text-white'} ${isHuge ? 'text-4xl' : isBig ? 'text-3xl' : 'text-xl'} font-black text-shadow`}>
+        +{formatNumber(value)}
       </div>
       {isBig && (
-        <div className="absolute -top-1 -right-1">
-          <Sparkles className="w-4 h-4 text-yellow-400 animate-pulse" />
+        <div className="absolute -top-1 -right-1 animate-pulse">
+          <Sparkles className={`${isHuge ? 'w-6 h-6 text-yellow-400' : 'w-4 h-4 text-yellow-400'}`} />
         </div>
       )}
     </div>
   );
 }
 
-// Ripple effect component
+// ═══════════════════════════════════════════════════════════════════════════
+// RIPPLE EFFECT - Enhanced with better animation
+// ═══════════════════════════════════════════════════════════════════════════
 function TapRipple({ x, y, onComplete }: { x: number; y: number; onComplete: () => void }) {
   const [radius, setRadius] = useState(0);
-  const [opacity, setOpacity] = useState(0.8);
+  const [opacity, setOpacity] = useState(0.6);
 
   useEffect(() => {
     let frame = 0;
-    const maxRadius = 80;
+    const totalFrames = 25;
+    const maxRadius = 100;
+    
     const animate = () => {
       frame++;
-      setRadius(frame * 3);
-      setOpacity(0.8 * (1 - frame / 30));
-      if (frame < 30) {
+      const progress = frame / totalFrames;
+      // Ease out quad
+      const easedProgress = 1 - Math.pow(1 - progress, 2);
+      
+      setRadius(easedProgress * maxRadius);
+      setOpacity(0.6 * (1 - easedProgress));
+      
+      if (frame < totalFrames) {
         requestAnimationFrame(animate);
       } else {
         onComplete();
@@ -88,7 +109,7 @@ function TapRipple({ x, y, onComplete }: { x: number; y: number; onComplete: () 
 
   return (
     <div
-      className="absolute pointer-events-none rounded-full border-4 border-white/30"
+      className="absolute pointer-events-none rounded-full"
       style={{
         left: x,
         top: y,
@@ -96,32 +117,45 @@ function TapRipple({ x, y, onComplete }: { x: number; y: number; onComplete: () 
         height: radius * 2,
         transform: 'translate(-50%, -50%)',
         opacity,
+        background: 'radial-gradient(circle, rgba(251, 191, 36, 0.3) 0%, transparent 70%)',
+        border: '2px solid rgba(251, 191, 36, 0.5)',
+        zIndex: 50,
       }}
     />
   );
 }
 
-// Combo indicator component
+// ═══════════════════════════════════════════════════════════════════════════
+// COMBO INDICATOR - Smooth entrance/exit
+// ═══════════════════════════════════════════════════════════════════════════
 function ComboIndicator({ combo, show }: { combo: number; show: boolean }) {
-  if (!show || combo < 3) return null;
+  if (combo < 3) return null;
 
   const colors = {
-    3: 'from-yellow-500 to-orange-500',
-    5: 'from-orange-500 to-red-500',
-    10: 'from-red-500 to-pink-500',
-    20: 'from-pink-500 to-purple-500',
+    3: { from: 'from-yellow-500', to: 'to-orange-500', glow: 'shadow-yellow-500/50' },
+    5: { from: 'from-orange-500', to: 'to-red-500', glow: 'shadow-orange-500/50' },
+    10: { from: 'from-red-500', to: 'to-pink-500', glow: 'shadow-red-500/50' },
+    20: { from: 'from-pink-500', to: 'to-purple-500', glow: 'shadow-pink-500/50' },
   };
 
-  const getColor = () => {
+  const getColorScheme = () => {
     if (combo >= 20) return colors[20];
     if (combo >= 10) return colors[10];
     if (combo >= 5) return colors[5];
     return colors[3];
   };
 
+  const colorScheme = getColorScheme();
+
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
-      <div className={`px-4 py-2 rounded-full bg-gradient-to-r ${getColor()} shadow-lg animate-bounce`}>
+    <div 
+      className={`absolute top-4 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ${
+        show ? 'opacity-100 scale-100' : 'opacity-0 scale-75'
+      }`}
+    >
+      <div 
+        className={`px-5 py-2.5 rounded-full bg-gradient-to-r ${colorScheme.from} ${colorScheme.to} shadow-lg ${colorScheme.glow} animate-bounce`}
+      >
         <div className="flex items-center gap-2 text-white font-bold">
           <Zap className="w-5 h-5" />
           <span>COMBO x{combo}</span>
@@ -131,6 +165,27 @@ function ComboIndicator({ combo, show }: { combo: number; show: boolean }) {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// LEVEL UP CELEBRATION - New polish feature
+// ═══════════════════════════════════════════════════════════════════════════
+function LevelUpCelebration({ level, show }: { level: number; show: boolean }) {
+  if (!show) return null;
+
+  return (
+    <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+      <div className="text-center animate-celebration">
+        <div className="text-6xl mb-2">🎉</div>
+        <div className="text-3xl font-black text-yellow-400 text-shadow">
+          LEVEL {level}!
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN TAP AREA COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
 export function TapArea({
   epoch,
   onTap,
@@ -150,7 +205,20 @@ export function TapArea({
   const [ripples, setRipples] = useState<Array<{ id: string; x: number; y: number }>>([]);
   const [combo, setCombo] = useState(0);
   const [showCombo, setShowCombo] = useState(false);
+  const [showLevelUp, setShowLevelUp] = useState(false);
+  const [prevLevel, setPrevLevel] = useState(level);
   const lastTapTime = useRef(0);
+  const comboTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Detect level up
+  useEffect(() => {
+    if (level > prevLevel) {
+      setShowLevelUp(true);
+      setPrevLevel(level);
+      const timeout = setTimeout(() => setShowLevelUp(false), 2000);
+      return () => clearTimeout(timeout);
+    }
+  }, [level, prevLevel]);
 
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!areaRef.current) return;
@@ -171,9 +239,9 @@ export function TapArea({
     const y = clientY - rect.top;
     onTap(x, y);
 
-    // Add particle
+    // Add particle with slight randomization for variety
     const particleId = `p_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-    setParticles(prev => [...prev, { id: particleId, x, y, value: tapPower }]);
+    setParticles(prev => [...prev, { id: particleId, x: x + (Math.random() - 0.5) * 10, y: y + (Math.random() - 0.5) * 10, value: tapPower }]);
 
     // Add ripple
     const rippleId = `r_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
@@ -186,7 +254,12 @@ export function TapArea({
         const newCombo = prev + 1;
         if (newCombo >= 3) {
           setShowCombo(true);
-          setTimeout(() => setShowCombo(false), 800);
+          // Clear existing timeout
+          if (comboTimeoutRef.current) {
+            clearTimeout(comboTimeoutRef.current);
+          }
+          // Auto-hide combo after delay
+          comboTimeoutRef.current = setTimeout(() => setShowCombo(false), 1000);
         }
         return newCombo;
       });
@@ -254,15 +327,12 @@ export function TapArea({
           </div>
         </div>
 
-        {/* XP Progress Bar */}
-        <div className="relative w-full bg-black/30 rounded-full h-3 sm:h-4 overflow-hidden">
+        {/* XP Progress Bar - Fixed shine animation */}
+        <div className="xp-bar">
           <div
-            className="h-full bg-gradient-to-r from-yellow-400 to-amber-500 transition-all duration-100 rounded-full relative"
+            className="xp-bar-fill"
             style={{ width: `${Math.min(xpPercent, 100)}%` }}
-          >
-            {/* Shine effect */}
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shine" />
-          </div>
+          />
         </div>
         <div className="flex justify-between text-[10px] sm:text-xs mt-1 opacity-90">
           <span className="font-medium">{formatNumber(xp)} XP</span>
@@ -280,12 +350,15 @@ export function TapArea({
         onClick={handleTap}
         onTouchStart={handleTap}
       >
+        {/* Level Up Celebration */}
+        <LevelUpCelebration level={level} show={showLevelUp} />
+
         {/* Animated background particles */}
         <div className="absolute inset-0 overflow-hidden opacity-20">
-          {[...Array(20)].map((_, i) => (
+          {[...Array(15)].map((_, i) => (
             <div
               key={i}
-              className="absolute w-2 h-2 bg-white rounded-full animate-float-slow"
+              className="absolute w-1.5 h-1.5 bg-white rounded-full animate-float-slow"
               style={{
                 left: `${Math.random() * 100}%`,
                 top: `${Math.random() * 100}%`,
@@ -296,29 +369,33 @@ export function TapArea({
           ))}
         </div>
 
-        {/* Central Icon with glow */}
+        {/* Central Icon with enhanced glow */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative">
-            {/* Glow effect */}
+            {/* Enhanced glow effect */}
             <div
-              className="absolute inset-0 blur-2xl animate-pulse"
-              style={{ backgroundColor: epoch.color, opacity: 0.4 }}
+              className="absolute inset-0 blur-3xl animate-pulse"
+              style={{ backgroundColor: epoch.color, opacity: 0.5 }}
+            />
+            <div
+              className="absolute inset-0 blur-xl"
+              style={{ backgroundColor: epoch.color, opacity: 0.3 }}
             />
             {/* Main icon */}
             <div
-              className="text-6xl sm:text-8xl transform transition-transform duration-150 active:scale-95 drop-shadow-2xl relative z-10"
-              style={{ filter: `drop-shadow(0 0 20px ${epoch.color})` }}
+              className="text-6xl sm:text-8xl transform transition-transform duration-150 active:scale-95 relative z-10"
+              style={{ filter: `drop-shadow(0 0 30px ${epoch.color})` }}
             >
               {epoch.currencyIcon}
             </div>
           </div>
         </div>
 
-        {/* Tap Power Indicator */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/60 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full text-white backdrop-blur-md shadow-lg border border-white/20">
+        {/* Tap Power Indicator - Enhanced styling */}
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 px-5 sm:px-6 py-2.5 sm:py-3 rounded-full text-white backdrop-blur-md shadow-lg border border-white/20">
           <div className="flex items-center gap-2">
-            <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
-            <span className="text-sm sm:text-base font-bold">
+            <Zap className="w-5 h-5 sm:w-5 sm:h-5 text-yellow-400 animate-pulse" />
+            <span className="text-base sm:text-lg font-bold">
               +{formatNumber(Math.round(effectiveTapPower))} XP
             </span>
           </div>
@@ -348,9 +425,9 @@ export function TapArea({
           />
         ))}
 
-        {/* Prestige indicator */}
+        {/* Prestige indicator - Enhanced */}
         {prestigeLevel > 0 && (
-          <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-500 to-amber-500 px-3 py-1.5 rounded-full shadow-lg">
+          <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-500 to-amber-500 px-3 py-1.5 rounded-full shadow-lg animate-pulse-slow">
             <div className="flex items-center gap-1 text-black font-bold text-sm">
               <Sparkles className="w-4 h-4" />
               <span>Енергія x5</span>
