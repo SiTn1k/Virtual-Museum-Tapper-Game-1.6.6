@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { validateRequest } from "../_shared/validate-init-data.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -149,7 +150,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body = await req.json();
-    const { action, telegram_id, title, message, action_url, action_label, schedule_for } = body as {
+    const { action, telegram_id, title, message, action_url, action_label, schedule_for, init_data } = body as {
       action: "send" | "schedule";
       telegram_id?: number;
       title?: string;
@@ -157,7 +158,31 @@ Deno.serve(async (req: Request) => {
       action_url?: string;
       action_label?: string;
       schedule_for?: string;
+      init_data: string;
     };
+
+    // Validate init_data (HMAC validation required)
+    if (!init_data) {
+      return new Response(
+        JSON.stringify({ error: "Missing init_data" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const validation = validateRequest(init_data);
+    if (!validation.valid) {
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (validation.userId !== telegram_id) {
+      return new Response(
+        JSON.stringify({ error: "User ID mismatch" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Validate required fields for send action
     if (action === "send") {

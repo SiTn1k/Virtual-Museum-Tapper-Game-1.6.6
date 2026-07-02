@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { validateRequest } from "../_shared/validate-init-data.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -25,6 +26,7 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 interface TrackSessionRequest {
   telegram_id: number;
   event: "start" | "activity" | "end";
+  init_data: string;
 }
 
 function jsonResponse(data: Record<string, unknown>, status = 200) {
@@ -45,7 +47,7 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: TrackSessionRequest = await req.json();
-    const { telegram_id, event } = body;
+    const { telegram_id, event, init_data } = body;
 
     if (!telegram_id || typeof telegram_id !== "number" || telegram_id <= 0) {
       return jsonResponse({ error: "Invalid telegram_id" }, 400);
@@ -53,6 +55,19 @@ Deno.serve(async (req: Request) => {
 
     if (!event || !["start", "activity", "end"].includes(event)) {
       return jsonResponse({ error: "Invalid event type" }, 400);
+    }
+
+    if (!init_data) {
+      return jsonResponse({ error: "Missing init_data" }, 400);
+    }
+
+    const validation = validateRequest(init_data);
+    if (!validation.valid) {
+      return jsonResponse({ error: validation.error }, 401);
+    }
+
+    if (validation.userId !== telegram_id) {
+      return jsonResponse({ error: "User ID mismatch" }, 403);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);

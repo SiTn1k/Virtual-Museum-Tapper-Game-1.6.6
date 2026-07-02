@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { validateRequest } from "../_shared/validate-init-data.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,6 +45,7 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 interface PrestigeRequest {
   telegram_id: number;
+  init_data: string;
 }
 
 interface PrestigeResponse {
@@ -94,10 +96,24 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: PrestigeRequest = await req.json();
-    const { telegram_id } = body;
+    const { telegram_id, init_data } = body;
 
     if (!telegram_id || typeof telegram_id !== "number" || telegram_id <= 0) {
       return jsonResponse({ error: "Invalid telegram_id" }, 400);
+    }
+
+    // HMAC validation
+    if (!init_data) {
+      return jsonResponse({ error: "Missing init_data" }, 400);
+    }
+
+    const validation = validateRequest(init_data);
+    if (!validation.valid) {
+      return jsonResponse({ error: validation.error || "Validation failed" }, 401);
+    }
+
+    if (validation.userId !== telegram_id) {
+      return jsonResponse({ error: "User ID mismatch" }, 403);
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
@@ -105,7 +121,7 @@ Deno.serve(async (req: Request) => {
     // Fetch current player state
     const { data: player, error: fetchError } = await supabase
       .from("game_progress")
-      .select("level, total_xp, prestige_level, prestige_points, prestige_research, artifact_levels, completed_artifacts")
+      .select("level, total_xp, prestige_level, prestige_points, prestige_research, artifact_levels, completed_artifacts, active_boosters")
       .eq("telegram_id", telegram_id)
       .maybeSingle();
 
@@ -121,7 +137,7 @@ Deno.serve(async (req: Request) => {
     // Check requirements
     const prestigeCheck = canPrestige(player.level as number);
     if (!prestigeCheck.canPrestige) {
-      return jsonResponse({ error: prestigeCheck.reason }, 400);
+      return jsonResponse({ error: prestigeCheck.reason || "Cannot prestige" }, 400);
     }
 
     // Calculate prestige points

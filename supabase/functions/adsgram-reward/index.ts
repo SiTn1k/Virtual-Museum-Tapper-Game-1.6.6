@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { validateRequest } from "../_shared/validate-init-data.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -238,16 +239,29 @@ async function handleGetCallback(params: URLSearchParams) {
 /**
  * Handle POST request (from frontend SDK after successful ad view)
  */
-async function handlePostCallback(body: { userid?: string; ad_id?: string; reward_type?: string }) {
-  const { userid, ad_id, reward_type } = body;
+async function handlePostCallback(body: { userid?: string; ad_id?: string; reward_type?: string; init_data?: string }) {
+  const { userid, ad_id, reward_type, init_data } = body;
 
   if (!userid) {
     return jsonResponse({ error: "Missing userid" }, 400);
   }
 
+  if (!init_data) {
+    return jsonResponse({ error: "Missing init_data" }, 400);
+  }
+
+  const validation = validateRequest(init_data);
+  if (!validation.valid) {
+    return jsonResponse({ error: validation.error }, 401);
+  }
+
   const telegramId = parseInt(userid, 10);
   if (isNaN(telegramId) || telegramId <= 0) {
     return jsonResponse({ error: "Invalid userid" }, 400);
+  }
+
+  if (validation.userId !== telegramId) {
+    return jsonResponse({ error: "User ID mismatch" }, 403);
   }
 
   const adId = ad_id || crypto.randomUUID();

@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { validateRequest } from "../_shared/validate-init-data.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -35,6 +36,7 @@ interface OpenChestRequest {
   epoch_id: string;
   chest_type?: "skychest" | "daily"; // skychest = premium, daily = free
   epoch_index?: number; // For cost calculation: 0-based epoch order
+  init_data: string;
 }
 
 interface ArtifactDrop {
@@ -275,7 +277,20 @@ Deno.serve(async (req: Request) => {
 
   try {
     const body: OpenChestRequest = await req.json();
-    const { telegram_id, epoch_id, chest_type = "daily", epoch_index = 0 } = body;
+    const { telegram_id, epoch_id, chest_type = "daily", epoch_index = 0, init_data } = body;
+
+    if (!init_data) {
+      return jsonResponse({ error: "Missing init_data" }, 400);
+    }
+
+    const validation = validateRequest(init_data);
+    if (!validation.valid) {
+      return jsonResponse({ error: validation.error }, 401);
+    }
+
+    if (validation.userId !== telegram_id) {
+      return jsonResponse({ error: "User ID mismatch" }, 403);
+    }
 
     if (!telegram_id || typeof telegram_id !== "number" || telegram_id <= 0) {
       return jsonResponse({ error: "Invalid telegram_id" }, 400);
