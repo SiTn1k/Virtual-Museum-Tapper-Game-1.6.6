@@ -47,7 +47,7 @@ export function PrestigeButton({
 
   // Can't prestige yet - show requirement
   if (!canPrestige) {
-    const missingLevel = Math.max(0, 960 - level);
+    const missingLevel = Math.max(0, 950 - level);
     const wrongEpoch = epochId !== 'independence';
 
     return (
@@ -70,8 +70,8 @@ export function PrestigeButton({
           </div>
           <ul className="text-xs text-gray-400 space-y-1">
             {missingLevel > 0 && (
-              <li className={level >= 960 ? 'text-green-400' : 'text-gray-400'}>
-                • Рівень {level}/960 (потрібно ще {missingLevel})
+              <li className={level >= 950 ? 'text-green-400' : 'text-gray-400'}>
+                • Рівень {level}/950 (потрібно ще {missingLevel})
               </li>
             )}
             {wrongEpoch && (
@@ -115,7 +115,7 @@ export function PrestigeButton({
         <div className="bg-green-900/20 border border-green-500/30 rounded-xl p-3 mb-3">
           <div className="text-sm text-green-400 font-medium mb-2">Всі вимоги виконані!</div>
           <div className="grid grid-cols-2 gap-2 text-xs text-gray-400">
-            <div className="text-green-400">✓ Рівень {level} (≥960)</div>
+            <div className="text-green-400">✓ Рівень {level} (≥950)</div>
             <div className="text-green-400">✓ Епоха: Незалежність</div>
           </div>
         </div>

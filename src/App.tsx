@@ -14,7 +14,7 @@ import { PrestigeButton, MuseumLaboratory } from './components/PrestigeSystem';
 import { SessionAdModal, ChestAdModal, EnergyRestoreAdButton, useSessionAdTrigger, useChestAdTrigger } from './components/AdSystem';
 import { OfflineRewardModal } from './components/OfflineRewardModal';
 import { EPOCHS, ARTIFACTS, getEpochById } from './data/epochs';
-import { initTelegramMiniApp, hapticImpact, hapticNotification, getTelegramWebApp, getTelegramUserId } from './lib/telegram';
+import { initTelegramMiniApp, hapticImpact, hapticNotification, getTelegramWebApp, getTelegramUserId, getRawInitData } from './lib/telegram';
 import { rpcTrackSession } from './lib/rpc';
 import { supabase } from './lib/supabase';
 import { Crown, ShoppingBag, Trophy, Gift, Loader2, Users, X, Clock, Shield, Zap, Star, ChevronRight, Wifi, RefreshCw, Timer, AlertTriangle, Sparkles, Battery, BatteryLow } from 'lucide-react';
@@ -38,6 +38,7 @@ function App() {
     processServerRewards,
     upgradeArtifactLevel,
     deductGachaCost,
+    refundGachaCost,
     recordGachaOpen,
     claimDailyTask,
     isLoading,
@@ -66,6 +67,7 @@ function App() {
     buyPrestigeUpgrade,
     // Energy System
     getEnergyMultiplier,
+    recordSessionAdWatched,
   } = useGame();
 
   const [activeTab, setActiveTab] = useState<Tab>('shop');
@@ -79,7 +81,7 @@ function App() {
   const { shouldShowSessionAd, dismissSessionAd } = useSessionAdTrigger(
     state.level,
     state.sessionStartAt || Date.now(),
-    state.lastOnlineAt
+    state.lastSessionAdAt
   );
 
   // Chest Ad hook - triggers every 10th chest
@@ -289,10 +291,12 @@ function App() {
             if (watchAd) {
               // Call claim-ad-reward Edge Function for x2
               try {
+                const init_data = getRawInitData();
                 const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claim-ad-reward`, {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
+                    init_data,
                     telegram_id: telegramId,
                     reward_type: 'offline_x2',
                   }),
@@ -1023,16 +1027,17 @@ function App() {
           prestigeLevel={state.prestigeLevel || 0}
           onClose={() => setShowGacha(false)}
           onRoll={(cost) => {
-            // Only validate affordability — server deducts currency
+            // Deduct currency optimistically
             if (state.currency < cost) return false;
+            deductGachaCost(cost);
             recordGachaOpen();
             recordChestOpened();
             return true;
           }}
+          onRefund={(cost) => refundGachaCost(cost)}
           onServerReward={(rewards) => {
             processServerRewards(rewards);
-            // Deduct currency client-side to match server deduction
-            deductGachaCost(100 * (EPOCHS.findIndex(e => e.id === epoch.id) + 1));
+            // Currency already deducted in onRoll
           }}
         />
       )}
@@ -1118,15 +1123,18 @@ function App() {
           onReward={async (type) => {
             // Claim reward via server Edge Function
             try {
+              const init_data = getRawInitData();
               const rewardType = type === 'energy' ? 'energy_restore' : 'session_ad';
               const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claim-ad-reward`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ telegram_id: telegramId, reward_type: rewardType }),
+                body: JSON.stringify({ init_data, telegram_id: telegramId, reward_type: rewardType }),
               });
               const data = await response.json();
               if (data.success) {
                 hapticNotification('success');
+                // Record session ad was watched to reset timer
+                recordSessionAdWatched();
                 // Refresh boosters/energy from server
                 refreshBoosters();
               } else {
@@ -1148,11 +1156,12 @@ function App() {
           chestsOpened={totalChestsOpened}
           onReward={async (type) => {
             try {
+              const init_data = getRawInitData();
               const rewardType = type === 'energy' ? 'energy_restore' : 'chest_bonus';
               const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claim-ad-reward`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ telegram_id: telegramId, reward_type: rewardType }),
+                body: JSON.stringify({ init_data, telegram_id: telegramId, reward_type: rewardType }),
               });
               const data = await response.json();
               if (data.success) {

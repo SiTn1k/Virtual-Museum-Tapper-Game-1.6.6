@@ -82,9 +82,12 @@ export async function rpcOpenChest(
 }> {
   if (!supabase) return { ok: false, error: 'No Supabase connection' };
 
+  const init_data = getRawInitData();
+  if (!init_data) return { ok: false, error: 'Not running in Telegram' };
+
   try {
     const { data, error } = await supabase.functions.invoke('open-chest', {
-      body: { telegram_id: telegramId, epoch_id: epochId, chest_type: chestType, epoch_index: epochIndex },
+      body: { init_data, telegram_id: telegramId, epoch_id: epochId, chest_type: chestType, epoch_index: epochIndex },
     });
 
     if (error) return { ok: false, error: error.message || 'Edge function error' };
@@ -105,9 +108,12 @@ export async function rpcTrackSession(
 ): Promise<{ ok: boolean }> {
   if (!supabase) return { ok: false };
 
+  const init_data = getRawInitData();
+  if (!init_data) return { ok: false };
+
   try {
     await supabase.functions.invoke('track-session', {
-      body: { telegram_id: telegramId, event },
+      body: { init_data, telegram_id: telegramId, event },
     });
     return { ok: true };
   } catch {
@@ -218,9 +224,11 @@ export async function rpcGetLeaderboard(
 }>> {
   if (!supabase) return [];
 
+  const init_data = getRawInitData();
+
   try {
     const { data, error } = await supabase.functions.invoke('get-leaderboard', {
-      body: { limit },
+      body: { init_data, limit },
     });
 
     if (error) {
@@ -272,9 +280,12 @@ export async function rpcGetUserRank(
 ): Promise<number | null> {
   if (!supabase) return null;
 
+  const init_data = getRawInitData();
+  if (!init_data) return null;
+
   try {
     const { data, error } = await supabase.functions.invoke('get-user-rank', {
-      body: { telegram_id: telegramId },
+      body: { init_data, telegram_id: telegramId },
     });
 
     if (error) {
@@ -297,9 +308,12 @@ export async function rpcFetchActiveBoosters(
 ): Promise<Record<string, unknown>> {
   if (!supabase) return {};
 
+  const init_data = getRawInitData();
+  if (!init_data) return {};
+
   try {
     const { data, error } = await supabase.functions.invoke('fetch-active-boosters', {
-      body: { telegram_id: telegramId },
+      body: { init_data, telegram_id: telegramId },
     });
 
     if (error) {

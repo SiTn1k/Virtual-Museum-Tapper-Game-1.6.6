@@ -178,7 +178,7 @@ Deno.serve(async (req: Request) => {
     }
 
     // Apply reward based on type
-    let updateData: Record<string, unknown> = {};
+    const updateData: Record<string, unknown> = {};
     let rewardApplied = false;
     let newValue = 0;
 
@@ -194,7 +194,13 @@ Deno.serve(async (req: Request) => {
       }
 
       case "chest_bonus": {
-        // Chest bonus is handled in open-chest, this just tracks limit
+        // Mark chest bonus boost for validation during chest opening
+        // Client checks active_boosters.chest_bonus_active during open-chest
+        const activeBoosters = (player.active_boosters as Record<string, unknown>) || {};
+        updateData.active_boosters = {
+          ...activeBoosters,
+          chest_bonus_active: true,
+        };
         rewardApplied = true;
         break;
       }

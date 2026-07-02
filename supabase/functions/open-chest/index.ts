@@ -308,7 +308,7 @@ Deno.serve(async (req: Request) => {
     // Fetch player state
     const { data: player, error: fetchError } = await supabase
       .from("game_progress")
-      .select("currency, prestige_level, prestige_research, artifact_parts, artifact_levels, completed_artifacts")
+      .select("currency, prestige_level, prestige_research, artifact_parts, artifact_levels, completed_artifacts, active_boosters")
       .eq("telegram_id", telegram_id)
       .maybeSingle();
 
@@ -334,8 +334,15 @@ Deno.serve(async (req: Request) => {
     // +5% per level (relative bonus, so 10 levels = +50% of base 1% = 1.5% total)
     const rareArtifactChanceBonus = (prestigeResearch.rare_artifact_chance || 0) * 0.05;
 
+    // Check for chest bonus boost (from watching ad)
+    const activeBoosters = (player.active_boosters as Record<string, unknown>) || {};
+    const hasChestBonus = activeBoosters.chest_bonus_active === true;
+
+    // Apply +5% rare chance if chest bonus active
+    const finalRareBonus = hasChestBonus ? rareArtifactChanceBonus + 5 : rareArtifactChanceBonus;
+
     // Generate rewards
-    const rewards = generateRewards(epoch_id, prestigeLevel, rareArtifactChanceBonus, chest_type);
+    const rewards = generateRewards(epoch_id, prestigeLevel, finalRareBonus, chest_type);
 
     // Update player's artifact parts
     const artifactParts = (player.artifact_parts as Record<string, number>) || {};
@@ -358,12 +365,19 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Update database (deduct currency + save artifacts)
+    // Update database (deduct currency + save artifacts + clear chest bonus if used)
     const updateData: Record<string, unknown> = {
       artifact_parts: artifactParts,
       artifact_levels: artifactLevels,
       completed_artifacts: completedArtifacts,
     };
+
+    // Clear chest bonus if it was used
+    if (hasChestBonus) {
+      const updatedBoosters = { ...activeBoosters };
+      delete updatedBoosters.chest_bonus_active;
+      updateData.active_boosters = updatedBoosters;
+    }
 
     if (chestCost > 0) {
       updateData.currency = playerCurrency - chestCost;

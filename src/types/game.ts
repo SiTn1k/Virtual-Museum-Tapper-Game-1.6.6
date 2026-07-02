@@ -165,6 +165,7 @@ export interface GameState {
   maxEnergy: number;
   lastOnlineAt: number; // timestamp for offline income calc
   sessionStartAt: number; // timestamp for session ads
+  lastSessionAdAt: number; // timestamp of last session ad reward
   // Daily ad limits
   dailyAdViews: DailyAdViews;
 }

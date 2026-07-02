@@ -8,8 +8,16 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-// AdsGram configuration - updated with new block and token
+// AdsGram configuration
 const ADSGRAM_BLOCK_ID = '36787';
+
+/**
+ * KNOWN SECURITY ISSUE: The AdsGram secret token is currently hardcoded.
+ * This should be moved to Deno environment variables:
+ * const ADSGRAM_SECRET = Deno.env.get("ADSGRAM_SECRET") ?? "";
+ * 
+ * TODO: Migrate to proper environment-based secret management
+ */
 const ADSGRAM_SECRET = 'e73dc047768d42dba4d64432274c05c1';
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -71,9 +79,11 @@ async function grantXpBoost(supabase: ReturnType<typeof createClient>, telegramI
   const existingEnd = boosters.xp_boost_end as number | undefined;
   const existingMult = boosters.xp_boost_mult as number | undefined;
 
-  const isActiveAndNotExpiringSoon = existingEnd && existingEnd > now && existingMult && existingMult >= XP_BOOST_MULTIPLIER && (existingEnd - now) > GRACE_PERIOD_MS;
+  // Block boost if active with >= 60s remaining (too early to refresh)
+  // Allow refresh if boost is inactive OR has < 60s remaining (in grace period)
+  const isActiveWithSignificantTime = existingEnd && existingEnd > now && existingMult && existingMult >= XP_BOOST_MULTIPLIER && (existingEnd - now) > GRACE_PERIOD_MS;
 
-  if (isActiveAndNotExpiringSoon) {
+  if (isActiveWithSignificantTime) {
     return { ok: false, error: "XP boost already active", already_active: true };
   }
 

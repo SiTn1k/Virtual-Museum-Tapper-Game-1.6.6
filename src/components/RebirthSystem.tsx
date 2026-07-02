@@ -12,6 +12,8 @@ interface RebirthSystemProps {
     rare_artifact_chance?: number;
     passive_income?: number;
     xp_gain?: number;
+    tap_power?: number;
+    energy_capacity?: number;
   };
   totalXp: number;
   onPrestige: () => void;

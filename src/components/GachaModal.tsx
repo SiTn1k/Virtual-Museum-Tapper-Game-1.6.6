@@ -27,6 +27,7 @@ interface GachaModalProps {
   prestigeLevel: number;
   onClose: () => void;
   onRoll: (cost: number) => boolean;
+  onRefund: (cost: number) => void;
   onServerReward: (rewards: GachaReward[]) => void;
 }
 
@@ -51,6 +52,7 @@ export function GachaModal({
   prestigeLevel,
   onClose,
   onRoll,
+  onRefund,
   onServerReward,
 }: GachaModalProps) {
   const [phase, setPhase] = useState<'ready' | 'rolling' | 'result' | 'error'>('ready');
@@ -92,6 +94,7 @@ export function GachaModal({
     if (!telegramId) {
       setErrorMessage('Помилка: немає Telegram ID');
       setPhase('error');
+      onRefund(gachaCost); // Refund on failure
       return;
     }
 
@@ -101,13 +104,14 @@ export function GachaModal({
     if (!result.ok || !result.rewards || result.rewards.length === 0) {
       setErrorMessage(result.error || 'Не вдалося відкрити скриню');
       setPhase('error');
+      onRefund(gachaCost); // Refund on server failure
       return;
     }
 
     pendingRewardsRef.current = result.rewards;
     setRewards(result.rewards);
     setPrimaryReward(result.rewards[0]);
-  }, [phase, canAfford, hasArtifacts, onRoll, gachaCost, epoch.id]);
+  }, [phase, canAfford, hasArtifacts, onRoll, onRefund, gachaCost, epoch.id]);
 
   // Animation effect — shows rolling then reveals server result
   useEffect(() => {

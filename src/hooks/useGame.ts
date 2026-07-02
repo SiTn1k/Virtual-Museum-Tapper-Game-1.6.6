@@ -182,10 +182,13 @@ const INITIAL_STATE: GameState = {
   prestigePoints: 0,
   prestigeResearch: {},
   // Phase 2: Energy System (only after Prestige 1+)
+  // Note: maxEnergy formula is 1000 + (prestigeResearch.energy_capacity * 100)
+  // Initial state has no research, so 1000
   energy: 1000,
   maxEnergy: 1000,
   lastOnlineAt: Date.now(),
   sessionStartAt: Date.now(),
+  lastSessionAdAt: 0,
   dailyAdViews: {},
 };
 
@@ -317,7 +320,10 @@ export function useGame() {
         }
       }
       if (saved) {
-        const passiveXp = calculatePassiveXp(saved.ownedGenerators, saved.unlockedEpochs);
+        const basePassiveXp = calculatePassiveXp(saved.ownedGenerators, saved.unlockedEpochs);
+        // Apply passive_income research bonus: +10% per level
+        const passiveResearchBonus = 1 + ((saved.prestigeResearch?.passive_income || 0) * 0.10);
+        const passiveXp = basePassiveXp * passiveResearchBonus;
 
         // Compute offline gains using server-based timestamp
         // lastSavedAt comes from server's last_saved_at column during hydration
@@ -338,10 +344,8 @@ export function useGame() {
         let newStreak = saved.dailyStreak || 0;
         let newBestStreak = saved.bestStreak || 0;
         let newLastLoginDate = saved.lastLoginDate;
-        let isNewDay = false;
 
         if (saved.lastLoginDate !== today) {
-          isNewDay = true;
           if (!saved.lastLoginDate) {
             // Brand new player
             newStreak = 1;
@@ -367,7 +371,8 @@ export function useGame() {
           dailyTasksState = makeFreshDailyTasks(today);
         }
 
-        if (offlineMs > 60_000 && (offlineXp > 100 || offlineCurrency > 10) && !isNewDay) {
+        // Show offline rewards for significant offline time (even on new day)
+        if (offlineMs > 60_000 && (offlineXp > 100 || offlineCurrency > 10)) {
           setOfflineGains({ xp: offlineXp, currency: offlineCurrency });
         }
 
@@ -425,8 +430,8 @@ export function useGame() {
         setSyncStatus('syncing');
         await saveRemoteState(stateRef.current);
         setSyncStatus('synced');
-        // Clear connection error on first successful save after a failure
-        setConnectionError(prev => prev ? null : prev);
+        // Clear connection error on successful save
+        setConnectionError(null);
       } catch (e) {
         console.error('Remote save failed:', e);
         setSyncStatus('error');
@@ -527,8 +532,10 @@ export function useGame() {
 
       // Apply prestige research XP bonus
       const prestigeXpBonus = 1 + ((prev.prestigeResearch?.xp_gain || 0) * 0.05);
+      // Apply tap_power bonus: +1 base tap power per level
+      const tapPowerBonus = prev.prestigeResearch?.tap_power || 0;
 
-      const baseTap = Math.max(1, Math.round(prev.tapPower * artXpMult * boostXpMult * energyMult * prestigeXpBonus));
+      const baseTap = Math.max(1, Math.round((prev.tapPower + tapPowerBonus) * artXpMult * boostXpMult * energyMult * prestigeXpBonus));
       const passiveFloor = Math.round(prev.passiveXpPerSecond * 0.015);
       const value = Math.max(baseTap, passiveFloor);
 
@@ -554,11 +561,12 @@ export function useGame() {
         : tasks;
 
       // Use energy if prestige >= 1 and energy > 0 (consume 1 per tap)
+      // Regenerate 1 energy per second when not using x5 boost
       const currentEnergy = prev.energy || 0;
-      const maxEnergy = prev.maxEnergy || 1000;
+      const maxEnergy = 1000 + ((prev.prestigeResearch?.energy_capacity || 0) * 100);
       const newEnergy = hasEnergyBoost
         ? Math.max(0, currentEnergy - 1)
-        : Math.min(maxEnergy, currentEnergy); // Regenerate when not using x5
+        : Math.min(maxEnergy, currentEnergy + 1); // Regenerate +1 per tap
 
       return {
         ...prev,
@@ -639,25 +647,30 @@ export function useGame() {
       const newDupes = { ...prev.artifactDupes };
       const newLevels = { ...prev.artifactLevels };
 
+      // Track completions within this operation using a Set to prevent race conditions
+      const newlyCompletedInThisOp = new Set<string>();
+
+      // Check if already completed (either in prev state or already added in this op)
+      const isAlreadyCompleted = newCompleted.includes(artifactId) || newlyCompletedInThisOp.has(artifactId);
+
       if (isFull) {
-        if (newCompleted.includes(artifactId)) {
+        if (isAlreadyCompleted) {
           // Duplicate of a completed artifact → add fragments for upgrades
           newParts[artifactId] = (newParts[artifactId] || 0) + (artifact?.parts || 10);
         } else {
+          // New artifact completion
           newCompleted.push(artifactId);
-          // Set initial level to 1
+          newlyCompletedInThisOp.add(artifactId);
           newLevels[artifactId] = 1;
         }
-      } else if (newCompleted.includes(artifactId)) {
-        // Part for an already-completed artifact → add to parts (for upgrades)
-        newParts[artifactId] = (newParts[artifactId] || 0) + 1;
       } else {
-        // Only add parts if artifact not already completed
+        // Add part(s)
         newParts[artifactId] = (newParts[artifactId] || 0) + 1;
 
-        // Auto-complete when all parts collected
-        if (artifact && newParts[artifactId] >= artifact.parts) {
+        // Auto-complete when all parts collected (only if not already completed)
+        if (!isAlreadyCompleted && artifact && newParts[artifactId] >= artifact.parts) {
           newCompleted.push(artifactId);
+          newlyCompletedInThisOp.add(artifactId);
           newLevels[artifactId] = 1;
         }
       }
@@ -673,13 +686,22 @@ export function useGame() {
       const newCompleted = [...(prev.completedArtifacts || [])];
       const newLevels = { ...prev.artifactLevels };
 
+      // Track completions within this operation using a Set to prevent race conditions
+      const newlyCompletedInThisOp = new Set<string>();
+
       for (const reward of rewards) {
         const artifact = ARTIFACTS.find(a => a.id === reward.id);
+
+        // Skip if already completed in previous state or already added in this op
+        const isAlreadyCompleted = newCompleted.includes(reward.id) || newlyCompletedInThisOp.has(reward.id);
+        if (isAlreadyCompleted) continue;
+
         newParts[reward.id] = (newParts[reward.id] || 0) + reward.parts_granted;
 
         // Auto-complete if enough parts collected (matches server logic)
-        if (artifact && newParts[reward.id] >= artifact.parts && !newCompleted.includes(reward.id)) {
+        if (artifact && newParts[reward.id] >= artifact.parts) {
           newCompleted.push(reward.id);
+          newlyCompletedInThisOp.add(reward.id);
           newLevels[reward.id] = 1;
         }
       }
@@ -715,6 +737,11 @@ export function useGame() {
     return true;
   }, [state.currency]);
 
+  // Refund gacha cost on failure (rollback optimistic deduction)
+  const refundGachaCost = useCallback((cost: number) => {
+    setState(prev => ({ ...prev, currency: prev.currency + cost }));
+  }, []);
+
   const recordGachaOpen = useCallback(() => {
     setState(prev => {
       const tasks = prev.dailyTasksState;
@@ -727,6 +754,11 @@ export function useGame() {
         },
       };
     });
+  }, []);
+
+  // Record when session ad was watched (for session ad timing)
+  const recordSessionAdWatched = useCallback(() => {
+    setState(prev => ({ ...prev, lastSessionAdAt: Date.now() }));
   }, []);
 
   const claimDailyTask = useCallback((taskId: string) => {
@@ -905,12 +937,13 @@ export function useGame() {
         // INCREMENT:
         prestigeLevel: data.prestige_level,
         prestigePoints: data.total_prestige_points,
-        // Energy reset to full
-        energy: 1000,
-        maxEnergy: 1000,
+        // Energy reset to full (respecting energy_capacity upgrade)
+        energy: 1000 + ((prev.prestigeResearch?.energy_capacity || 0) * 100),
+        maxEnergy: 1000 + ((prev.prestigeResearch?.energy_capacity || 0) * 100),
         lastSavedAt: Date.now(),
         lastOnlineAt: Date.now(),
         sessionStartAt: Date.now(),
+        lastSessionAdAt: 0,
       }));
 
       hapticNotification('success');
@@ -980,7 +1013,7 @@ export function useGame() {
     const elapsedMs = now - lastOnline;
     const REGEN_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
     const REGEN_AMOUNT = 2;
-    const MAX_ENERGY = 1000;
+    const MAX_ENERGY = 1000 + ((state.prestigeResearch?.energy_capacity || 0) * 100);
 
     // Calculate how many regen cycles have passed
     const cycles = Math.floor(elapsedMs / REGEN_INTERVAL_MS);
@@ -989,9 +1022,10 @@ export function useGame() {
     if (energyToAdd > 0 || (state.energy || 0) < MAX_ENERGY) {
       setState(prev => {
         const currentEnergy = prev.energy || 0;
-        if (currentEnergy >= MAX_ENERGY && energyToAdd <= 0) return prev;
+        const maxE = 1000 + ((prev.prestigeResearch?.energy_capacity || 0) * 100);
+        if (currentEnergy >= maxE && energyToAdd <= 0) return prev;
 
-        const newEnergy = Math.min(MAX_ENERGY, currentEnergy + Math.max(0, energyToAdd));
+        const newEnergy = Math.min(maxE, currentEnergy + Math.max(0, energyToAdd));
         return {
           ...prev,
           energy: newEnergy,
@@ -999,7 +1033,7 @@ export function useGame() {
         };
       });
     }
-  }, [state.prestigeLevel, state.lastOnlineAt, state.energy]);
+  }, [state.prestigeLevel, state.lastOnlineAt, state.energy, state.prestigeResearch]);
 
   // Energy regeneration interval - check every 2 minutes
   useEffect(() => {
@@ -1032,6 +1066,7 @@ export function useGame() {
     processServerRewards,
     upgradeArtifactLevel,
     deductGachaCost,
+    refundGachaCost,
     recordGachaOpen,
     claimDailyTask,
     isLoading,
@@ -1051,6 +1086,7 @@ export function useGame() {
     syncStatus,
     connectionError,
     dismissConnectionError,
+    recordSessionAdWatched,
     showDailyRewards,
     claimDailyReward,
     skipDailyRewards: useCallback(() => setShowDailyRewards(false), []),

@@ -3,7 +3,6 @@
  *
  * Provides integration with AdsGram Reward Video Ads.
  * Block ID: 36787
- * Token: e73dc047768d42dba4d64432274c05c1
  *
  * Reward: x3 XP multiplier for EXACTLY 30 minutes (does not extend)
  */
@@ -13,7 +12,19 @@ import type { ShowPromiseResult } from '@adsgram/react';
 // AdsGram Block ID for reward ads
 export const ADSGRAM_BLOCK_ID = '36787';
 
-// AdsGram Secret Token for server-side verification
+/**
+ * KNOWN SECURITY ISSUE: The AdsGram secret token is currently hardcoded in both
+ * the frontend and backend. This is a security risk because:
+ * 1. The secret is visible in client-side JavaScript
+ * 2. Users can extract and misuse the token
+ *
+ * PROPER FIX REQUIRED:
+ * 1. Move secret to environment variables: VITE_ADSGRAM_SECRET (frontend)
+ * 2. Use server-side environment variable for edge function
+ * 3. Never expose secrets in client-side code
+ *
+ * TODO: Migrate to proper environment-based secret management
+ */
 export const ADSGRAM_SECRET = 'e73dc047768d42dba4d64432274c05c1';
 
 // XP Boost configuration
