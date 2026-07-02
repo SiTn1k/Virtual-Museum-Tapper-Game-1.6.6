@@ -365,17 +365,19 @@ function App() {
         </button>
 
         <div className="flex items-center gap-2">
-          {/* Energy display (only for Prestige 1+) */}
+          {/* Energy display (only for Prestige 1+) - Phase 6: Progressive energy system */}
           {(state.prestigeLevel || 0) >= 1 && (
-            <div className={`bg-white/10 rounded-xl px-2 py-1.5 flex items-center gap-1 ${
-              (state.energy || 0) > 0 ? 'text-green-400' : 'text-gray-400'
+            <div className={`rounded-xl px-2 py-1.5 flex items-center gap-1 ${
+              energyMultiplier >= 4 ? 'bg-green-500/30 text-green-400' :
+              energyMultiplier >= 2 ? 'bg-yellow-500/30 text-yellow-400' :
+              'bg-white/10 text-gray-400'
             }`}>
-              {(state.energy || 0) > 0 ? (
+              {energyMultiplier >= 4 ? (
                 <Battery className="w-4 h-4" />
               ) : (
                 <BatteryLow className="w-4 h-4" />
               )}
-              <span className="text-xs font-bold">{state.energy || 0}/{state.maxEnergy || 100}</span>
+              <span className="text-xs font-bold">{energyMultiplier.toFixed(1)}x</span>
             </div>
           )}
           {/* Currency display */}
@@ -410,6 +412,7 @@ function App() {
         passiveXp={state.passiveXpPerSecond}
         currency={state.currency}
         currencyIcon={epoch.currencyIcon}
+        energyMultiplier={energyMultiplier}
         topOffset={0}
       />
 

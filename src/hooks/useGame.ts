@@ -25,7 +25,7 @@ import {
   getUserRank,
   fetchActiveBoosters,
 } from '../lib/storage';
-import { rpcClaimOfflineIncome, rpcBuyGenerator, rpcRecordTaps } from '../lib/rpc';
+import { rpcClaimOfflineIncome, rpcBuyGenerator, rpcRecordTaps, rpcValidatePassiveXp } from '../lib/rpc';
 import type { ActiveBoosters } from '../types/game';
 
 const LOCAL_SAVE_INTERVAL = 2000;
@@ -543,6 +543,44 @@ export function useGame() {
     };
   }, [isLoading, calculatePassiveXp]);
 
+  // Phase 8: Periodic passive XP validation
+  // Validates that client calculation matches server authoritative value
+  useEffect(() => {
+    if (isLoading) return;
+
+    const validatePassiveXp = async () => {
+      const telegramIdLocal = getTelegramUserId();
+      if (!telegramIdLocal) return;
+
+      try {
+        const result = await rpcValidatePassiveXp(telegramIdLocal);
+        if (result.success && !result.is_valid && result.expected_passive_xp !== undefined) {
+          // Server has a different value - this could indicate manipulation
+          // Log for analytics but don't auto-correct (could be legitimate desync)
+          console.warn('Passive XP discrepancy detected:', {
+            expected: result.expected_passive_xp,
+            current: result.current_passive_xp,
+            discrepancy: result.discrepancy,
+          });
+        }
+      } catch (e) {
+        // Silently fail - passive XP validation is best-effort
+        console.debug('Passive XP validation failed:', e);
+      }
+    };
+
+    // Validate passive XP every 60 seconds
+    const interval = setInterval(validatePassiveXp, 60000);
+
+    // Initial validation after 5 seconds
+    const timeout = setTimeout(validatePassiveXp, 5000);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [isLoading]);
+
   const tap = useCallback((x: number, y: number) => {
     const eventId = Math.random().toString(36).substr(2, 9);
 
@@ -550,9 +588,18 @@ export function useGame() {
       const { xp: artXpMult } = getArtifactMultipliers(prev.completedArtifacts || [], prev.artifactDupes || {});
       const { xp: boostXpMult } = getBoosterMultipliers(prev.activeBoosters || {});
 
-      // Energy multiplier: x5 if energy > 0 and prestige >= 1, x1 otherwise
-      const hasEnergyBoost = (prev.prestigeLevel || 0) >= 1 && (prev.energy || 0) > 0;
-      const energyMult = hasEnergyBoost ? 5 : 1;
+      // Phase 6: Progressive energy multiplier (1x to 5x based on energy %)
+      const getEnergyMult = () => {
+        if ((prev.prestigeLevel || 0) < 1) return 1;
+        const energy = prev.energy || 0;
+        const maxEnergy = 1000 + ((prev.prestigeResearch?.energy_capacity || 0) * 100);
+        if (energy <= 0) return 1;
+        const pct = Math.min(1, energy / maxEnergy);
+        if (pct < 0.2) return 1;
+        if (pct > 0.8) return 5;
+        return 1 + ((pct - 0.2) / 0.6) * 4;
+      };
+      const energyMult = getEnergyMult();
 
       // Apply prestige research XP bonus
       const prestigeXpBonus = 1 + ((prev.prestigeResearch?.xp_gain || 0) * 0.05);
@@ -584,20 +631,15 @@ export function useGame() {
           }
         : tasks;
 
-      // Use energy if prestige >= 1 and energy > 0 (consume 1 per tap)
-      // Regenerate 1 energy per second when not using x5 boost
-      const currentEnergy = prev.energy || 0;
-      const maxEnergy = 1000 + ((prev.prestigeResearch?.energy_capacity || 0) * 100);
-      const newEnergy = hasEnergyBoost
-        ? Math.max(0, currentEnergy - 1)
-        : Math.min(maxEnergy, currentEnergy + 1); // Regenerate +1 per tap
+      // Phase 6: Energy is now a passive multiplier (no per-tap consumption)
+      // Energy regenerates over time via regenerateEnergy(), not per tap
 
       return {
         ...prev,
         xp: prev.xp + value,
         totalXp: prev.totalXp + value,
         dailyTasksState: updatedTasks,
-        energy: newEnergy,
+        // No energy change on tap - passive regeneration only
       };
     });
   }, []);
@@ -1051,21 +1093,31 @@ export function useGame() {
     return true;
   }, [state.prestigeLevel, state.energy]);
 
-  // Get energy multiplier (x5 if energy > 0, x1 if energy = 0, only for prestige 1+)
+  // Get energy multiplier: progressive from 1x to 5x based on energy percentage
+  // Below 20% energy = 1x, above 80% = 5x, linear interpolation in between
   const getEnergyMultiplier = useCallback(() => {
     if ((state.prestigeLevel || 0) < 1) return 1;
-    return (state.energy || 0) > 0 ? 5 : 1;
-  }, [state.prestigeLevel, state.energy]);
+    const energy = state.energy || 0;
+    const maxEnergy = 1000 + ((state.prestigeResearch?.energy_capacity || 0) * 100);
+    if (energy <= 0) return 1;
+    const pct = Math.min(1, energy / maxEnergy);
+    // Smooth curve: 0%→1x, 20%→1x, 80%→5x, 100%→5x
+    if (pct < 0.2) return 1;
+    if (pct > 0.8) return 5;
+    // Linear interpolation from 1 to 5 between 20% and 80%
+    return 1 + ((pct - 0.2) / 0.6) * 4;
+  }, [state.prestigeLevel, state.energy, state.prestigeResearch]);
 
-  // Regenerate energy: +2 per 2 minutes (using timestamps for offline regeneration)
+  // Regenerate energy: +10 energy per 30 seconds (20/minute total)
+  // Phase 6: Faster regeneration for better gameplay feel
   const regenerateEnergy = useCallback(() => {
     if ((state.prestigeLevel || 0) < 1) return;
 
     const now = Date.now();
     const lastOnline = state.lastOnlineAt || now;
     const elapsedMs = now - lastOnline;
-    const REGEN_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
-    const REGEN_AMOUNT = 2;
+    const REGEN_INTERVAL_MS = 30 * 1000; // 30 seconds
+    const REGEN_AMOUNT = 10; // 10 energy per 30 seconds = 20/minute
     const MAX_ENERGY = 1000 + ((state.prestigeResearch?.energy_capacity || 0) * 100);
 
     // Calculate how many regen cycles have passed
@@ -1088,7 +1140,7 @@ export function useGame() {
     }
   }, [state.prestigeLevel, state.lastOnlineAt, state.energy, state.prestigeResearch]);
 
-  // Energy regeneration interval - check every 2 minutes
+  // Energy regeneration interval - check every 30 seconds
   useEffect(() => {
     if ((state.prestigeLevel || 0) < 1) return;
     if (isLoading) return;
@@ -1096,7 +1148,7 @@ export function useGame() {
     // Initial regeneration check
     regenerateEnergy();
 
-    const interval = setInterval(regenerateEnergy, 2 * 60 * 1000); // Every 2 minutes
+    const interval = setInterval(regenerateEnergy, 30 * 1000); // Every 30 seconds
     return () => clearInterval(interval);
   }, [state.prestigeLevel, isLoading, regenerateEnergy]);
 

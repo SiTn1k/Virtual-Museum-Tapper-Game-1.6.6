@@ -102,6 +102,10 @@ export interface PrestigeResearch {
   passive_income?: number;
   // Chief Historian: +5% XP Gain per level (max 20)
   xp_gain?: number;
+  // Cossack Power: +1 base tap power per level (max 5)
+  tap_power?: number;
+  // Energy Reserve: +100 max energy per level (max 10)
+  energy_capacity?: number;
 }
 
 // Artifact with level system

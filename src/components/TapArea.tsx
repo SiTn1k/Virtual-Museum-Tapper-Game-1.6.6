@@ -15,6 +15,7 @@ interface TapAreaProps {
   currency: number;
   currencyIcon: string;
   prestigeLevel: number;
+  energyMultiplier?: number;
   topOffset?: number;
 }
 
@@ -198,6 +199,7 @@ export function TapArea({
   currency,
   currencyIcon,
   prestigeLevel,
+  energyMultiplier = 1,
   topOffset = 0,
 }: TapAreaProps) {
   const areaRef = useRef<HTMLDivElement>(null);
@@ -425,12 +427,18 @@ export function TapArea({
           />
         ))}
 
-        {/* Prestige indicator - Enhanced */}
+        {/* Prestige indicator - Phase 6: Dynamic energy multiplier */}
         {prestigeLevel > 0 && (
-          <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-500 to-amber-500 px-3 py-1.5 rounded-full shadow-lg animate-pulse-slow">
-            <div className="flex items-center gap-1 text-black font-bold text-sm">
+          <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-full shadow-lg ${
+            energyMultiplier >= 4 ? 'bg-gradient-to-r from-green-500 to-emerald-500 animate-pulse-slow' :
+            energyMultiplier >= 2 ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
+            'bg-white/20'
+          }`}>
+            <div className={`flex items-center gap-1 font-bold text-sm ${
+              energyMultiplier >= 2 ? 'text-black' : 'text-white/80'
+            }`}>
               <Sparkles className="w-4 h-4" />
-              <span>Енергія x5</span>
+              <span>Енергія {energyMultiplier.toFixed(1)}x</span>
             </div>
           </div>
         )}

@@ -433,3 +433,47 @@ export async function rpcClaimOfflineIncome(
     return { success: false, error: String(e) };
   }
 }
+
+/**
+ * Phase 8: Validate passive XP server-side
+ * 
+ * Validates that the client's passive XP calculation matches the server's
+ * authoritative calculation. Returns expected value for client comparison.
+ */
+export async function rpcValidatePassiveXp(
+  telegramId: number,
+): Promise<{
+  success: boolean;
+  expected_passive_xp?: number;
+  current_passive_xp?: number;
+  discrepancy?: number;
+  is_valid?: boolean;
+  error?: string;
+}> {
+  if (!supabase) return { success: false, error: 'No Supabase connection' };
+
+  const init_data = getRawInitData();
+  if (!init_data) return { success: false, error: 'Not running in Telegram' };
+
+  try {
+    const { data, error } = await supabase.functions.invoke('validate-passive-xp', {
+      body: { init_data, telegram_id: telegramId },
+    });
+
+    if (error) {
+      console.error('rpcValidatePassiveXp error:', error);
+      return { success: false, error: error.message || 'Edge function error' };
+    }
+
+    return data as {
+      success: boolean;
+      expected_passive_xp?: number;
+      current_passive_xp?: number;
+      discrepancy?: number;
+      is_valid?: boolean;
+    };
+  } catch (e) {
+    console.error('rpcValidatePassiveXp error:', e);
+    return { success: false, error: String(e) };
+  }
+}

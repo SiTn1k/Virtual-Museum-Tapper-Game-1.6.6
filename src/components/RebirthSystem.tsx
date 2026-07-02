@@ -60,14 +60,15 @@ export function RebirthSystem({
     }
   };
 
-  // Prestige upgrades
+  // Prestige upgrades - Phase 7: Rebalanced costs
+  // XP gain was too cheap (1pt for +5% XP), now properly balanced
   const UPGRADES = [
     {
       id: 'rare_artifact_chance',
       name: 'Чорна Археологія',
       description: '+5% шанс рідкісного артефакту',
       icon: Sparkles,
-      cost: 2,
+      cost: 3, // Was 2 - increased for balance
       maxLevel: 10,
       effect: (level: number) => `+${level * 5}% рідкісні артефакти`,
     },
@@ -76,7 +77,7 @@ export function RebirthSystem({
       name: 'Всесвітня Експедиція',
       description: '+10% пасивний дохід',
       icon: Globe,
-      cost: 3,
+      cost: 4, // Was 3 - increased per economy audit
       maxLevel: 10,
       effect: (level: number) => `+${level * 10}% пасивний дохід`,
     },
@@ -85,7 +86,7 @@ export function RebirthSystem({
       name: 'Головний Історик',
       description: '+5% XP за кожне переродження',
       icon: BookOpen,
-      cost: 1,
+      cost: 2, // Was 1 - too cheap per economy audit
       maxLevel: 20,
       effect: (level: number) => `+${level * 5}% XP (назавжди)`,
     },
