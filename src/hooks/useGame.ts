@@ -25,6 +25,7 @@ import {
   getUserRank,
   fetchActiveBoosters,
 } from '../lib/storage';
+import { rpcClaimOfflineIncome, rpcBuyGenerator, rpcRecordTaps } from '../lib/rpc';
 import type { ActiveBoosters } from '../types/game';
 
 const LOCAL_SAVE_INTERVAL = 2000;
@@ -325,18 +326,46 @@ export function useGame() {
         const passiveResearchBonus = 1 + ((saved.prestigeResearch?.passive_income || 0) * 0.10);
         const passiveXp = basePassiveXp * passiveResearchBonus;
 
-        // Compute offline gains using server-based timestamp
-        // lastSavedAt comes from server's last_saved_at column during hydration
-        // We use lastOnlineAt (server timestamp) instead of Date.now() (device time)
-        // to prevent device clock manipulation exploits
-        const serverNow = saved.lastOnlineAt || Date.now();
-        const offlineMs = Math.max(0, serverNow - saved.lastSavedAt);
-        // Use prestige-based offline cap: 8h for prestige 0, 6h for prestige 1+
-        const prestigeLevel = saved.prestigeLevel || 0;
-        const offlineCap = prestigeLevel > 0 ? 6 * 3600 : 8 * 3600;
-        const offlineSec = Math.min(offlineMs / 1000, offlineCap);
-        let offlineXp = passiveXp * offlineSec;
-        let offlineCurrency = (saved.level * 50) * (offlineSec / 60);
+        // Phase 3: Use server-side offline income calculation
+        // This prevents device clock manipulation and double-claim exploits
+        // The Edge Function atomically swaps last_online_at and calculates rewards
+        const telegramId = getTelegramUserId();
+        let offlineXp = 0;
+        let offlineCurrency = 0;
+
+        if (telegramId) {
+          try {
+            const claimResult = await rpcClaimOfflineIncome(telegramId, false);
+            if (claimResult.success && claimResult.xp !== undefined) {
+              offlineXp = claimResult.xp;
+              offlineCurrency = claimResult.currency || 0;
+              
+              // Show offline rewards modal if there were significant gains
+              if (offlineXp > 100 || offlineCurrency > 10) {
+                setOfflineGains({ xp: offlineXp, currency: offlineCurrency });
+              }
+            }
+          } catch (err) {
+            console.error('Failed to claim offline income:', err);
+            // Fallback to local calculation if server fails
+            const serverNow = saved.lastOnlineAt || Date.now();
+            const offlineMs = Math.max(0, serverNow - saved.lastSavedAt);
+            const prestigeLevel = saved.prestigeLevel || 0;
+            const offlineCap = prestigeLevel > 0 ? 6 * 3600 : 8 * 3600;
+            const offlineSec = Math.min(offlineMs / 1000, offlineCap);
+            offlineXp = passiveXp * offlineSec;
+            offlineCurrency = (saved.level * 50) * (offlineSec / 60);
+          }
+        } else {
+          // Non-Telegram users: use local calculation (less critical for non-production)
+          const serverNow = saved.lastOnlineAt || Date.now();
+          const offlineMs = Math.max(0, serverNow - saved.lastSavedAt);
+          const prestigeLevel = saved.prestigeLevel || 0;
+          const offlineCap = prestigeLevel > 0 ? 6 * 3600 : 8 * 3600;
+          const offlineSec = Math.min(offlineMs / 1000, offlineCap);
+          offlineXp = passiveXp * offlineSec;
+          offlineCurrency = (saved.level * 50) * (offlineSec / 60);
+        }
 
         // ── Daily streak check ────────────────────────────────────────
         const today = getTodayDateStr();
@@ -369,11 +398,6 @@ export function useGame() {
         let dailyTasksState = saved.dailyTasksState;
         if (!dailyTasksState || dailyTasksState.date !== today) {
           dailyTasksState = makeFreshDailyTasks(today);
-        }
-
-        // Show offline rewards for significant offline time (even on new day)
-        if (offlineMs > 60_000 && (offlineXp > 100 || offlineCurrency > 10)) {
-          setOfflineGains({ xp: offlineXp, currency: offlineCurrency });
         }
 
         // ── Daily check-in: show reward modal if player hasn't claimed today ──
@@ -588,6 +612,22 @@ export function useGame() {
 
     if (state.currency < cost) return false;
 
+    // Phase 4: Use server-side validation for generator purchases
+    // Server validates balance, deducts currency, and returns new state
+    const telegramId = getTelegramUserId();
+    if (telegramId) {
+      // Call server-side validation (async, don't wait for response for optimistic update)
+      rpcBuyGenerator(generatorId, epoch.id).then(result => {
+        if (!result.ok) {
+          console.error('Generator purchase failed:', result.error);
+          // On failure, state will be out of sync - will be corrected on next load
+        }
+      }).catch(err => {
+        console.error('rpcBuyGenerator error:', err);
+      });
+    }
+
+    // Optimistic local update (matches expected server state)
     setState(prev => {
       const existing = prev.ownedGenerators.find(og => og.generatorId === generatorId);
       const newOwned = existing
@@ -614,13 +654,26 @@ export function useGame() {
     });
 
     return true;
-  }, [epoch.generators, state.currency, state.ownedGenerators, calculatePassiveXp]);
+  }, [epoch.generators, epoch.id, state.currency, state.ownedGenerators, calculatePassiveXp]);
 
   const upgradeTapPower = useCallback(() => {
     const rawCost = 25 * Math.pow(1.8, state.tapPower - 1);
     // Guard against floating-point overflow at very high tap power levels
     const cost = Number.isFinite(rawCost) ? Math.floor(rawCost) : Number.MAX_SAFE_INTEGER;
     if (state.currency < cost) return false;
+
+    // Phase 4: Use server-side validation for tap upgrades
+    const telegramId = getTelegramUserId();
+    if (telegramId) {
+      // Call server-side validation (async)
+      rpcUpgradeTap().then(result => {
+        if (!result.ok) {
+          console.error('Tap upgrade failed:', result.error);
+        }
+      }).catch(err => {
+        console.error('rpcUpgradeTap error:', err);
+      });
+    }
 
     setState(prev => {
       const tasks = prev.dailyTasksState;

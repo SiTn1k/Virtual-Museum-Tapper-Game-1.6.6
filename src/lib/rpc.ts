@@ -273,6 +273,66 @@ export async function rpcApplyReferralBonus(
 }
 
 /**
+ * Record taps server-side (Phase 4 - Client-Side Validation).
+ * Sends batched tap counts to server for authoritative XP calculation.
+ * Rate limited to prevent abuse.
+ */
+export async function rpcRecordTaps(
+  tapCount: number = 1,
+): Promise<{ ok: boolean; xp_gained?: number; xp_per_tap?: number; error?: string }> {
+  if (!supabase) return { ok: false, error: 'No Supabase connection' };
+
+  const init_data = getRawInitData();
+  if (!init_data) return { ok: false, error: 'Not running in Telegram' };
+
+  try {
+    const { data, error } = await supabase.functions.invoke('game-action', {
+      body: { action: 'record_tap', init_data, tap_count: tapCount },
+    });
+
+    if (error) {
+      console.error('rpcRecordTaps error:', error);
+      return { ok: false, error: error.message || 'Edge function error' };
+    }
+
+    return data as { ok: boolean; xp_gained?: number; xp_per_tap?: number; error?: string };
+  } catch (e) {
+    console.error('rpcRecordTaps error:', e);
+    return { ok: false, error: String(e) };
+  }
+}
+
+/**
+ * Buy generator with server-side validation (Phase 4).
+ * Validates balance, deducts currency, and updates generator level server-side.
+ */
+export async function rpcBuyGenerator(
+  generatorId: string,
+  epochId: string,
+): Promise<{ ok: boolean; cost?: number; new_level?: number; error?: string }> {
+  if (!supabase) return { ok: false, error: 'No Supabase connection' };
+
+  const init_data = getRawInitData();
+  if (!init_data) return { ok: false, error: 'Not running in Telegram' };
+
+  try {
+    const { data, error } = await supabase.functions.invoke('game-action', {
+      body: { action: 'buy_generator', init_data, generator_id: generatorId, epoch_id: epochId },
+    });
+
+    if (error) {
+      console.error('rpcBuyGenerator error:', error);
+      return { ok: false, error: error.message || 'Edge function error' };
+    }
+
+    return data as { ok: boolean; cost?: number; new_level?: number; error?: string };
+  } catch (e) {
+    console.error('rpcBuyGenerator error:', e);
+    return { ok: false, error: String(e) };
+  }
+}
+
+/**
  * Get user's rank via edge function (Phase 2 RLS fix).
  */
 export async function rpcGetUserRank(
@@ -325,5 +385,51 @@ export async function rpcFetchActiveBoosters(
   } catch (e) {
     console.error('rpcFetchActiveBoosters error:', e);
     return {};
+  }
+}
+
+/**
+ * Claim offline income via edge function (Phase 3 Race Condition Fix).
+ * Server-authoritative calculation prevents:
+ * - Device clock manipulation
+ * - Double-claim exploits via multiple tabs
+ * - Race conditions via atomic last_online_at swap with advisory locks
+ */
+export async function rpcClaimOfflineIncome(
+  telegramId: number,
+  x2_boost: boolean = false,
+): Promise<{
+  success: boolean;
+  xp?: number;
+  currency?: number;
+  offline_seconds?: number;
+  message?: string;
+  error?: string;
+}> {
+  if (!supabase) return { success: false, error: 'No Supabase connection' };
+
+  const init_data = getRawInitData();
+  if (!init_data) return { success: false, error: 'Not running in Telegram' };
+
+  try {
+    const { data, error } = await supabase.functions.invoke('claim-offline-income', {
+      body: { init_data, telegram_id: telegramId, x2_boost },
+    });
+
+    if (error) {
+      console.error('rpcClaimOfflineIncome error:', error);
+      return { success: false, error: error.message || 'Edge function error' };
+    }
+
+    return data as {
+      success: boolean;
+      xp?: number;
+      currency?: number;
+      offline_seconds?: number;
+      message?: string;
+    };
+  } catch (e) {
+    console.error('rpcClaimOfflineIncome error:', e);
+    return { success: false, error: String(e) };
   }
 }

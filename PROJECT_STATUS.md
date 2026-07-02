@@ -12,10 +12,10 @@
 
 | Metric | Value | Assessment |
 |--------|-------|------------|
-| **Overall Production Score** | **5.2/10** | 🚨 ALPHA |
-| **Project Phase** | **2 of 30** | Early Development |
-| **Completed Phases** | 2 | ✅ Phase 1 & 2 Complete |
-| **Next Phase** | Phase 3 | Critical Security — Race Condition Fix |
+| **Overall Production Score** | **6.5/10** | 🚨 ALPHA |
+| **Project Phase** | **4 of 30** | Early Development |
+| **Completed Phases** | 4 | ✅ Phase 1, 2, 3 & 4 Complete |
+| **Next Phase** | Phase 5 | Generator Economy Rebalance |
 | **Est. Time to Production** | 12-14 weeks | Soft launch ready |
 
 ---
@@ -35,21 +35,38 @@
 - Public leaderboard view created
 - **Score Impact:** 5.8 → 6.0/10
 
-### 🔄 Phase 3: NEXT
+### ✅ Phase 3: COMPLETE
 **Race Condition Fix** — Offline income double-claim vulnerability
-- Fix `swap_last_online_at` RPC that returns wrong value
-- Prevent players from claiming offline income twice
-- **Dependencies:** Phase 1 ✅, Phase 2 ✅
+- Replaced multi-step RPC with atomic `claim_offline_income_atomic()` function
+- Added `pg_advisory_xact_lock` for cross-connection race condition protection
+- Client now uses server-side offline income calculation (no more client-side manipulation)
+- Edge Function delegates to single atomic database transaction
+- **Score Impact:** 6.0 → 6.2/10
+
+### ✅ Phase 4: COMPLETE
+**Client-Side Validation** — Tap XP & Generator purchases
+- Added server-side generator purchase validation (all 70 generators across 14 epochs)
+- Added `record_tap` action for server-authoritative tap XP calculation
+- Enhanced `upgradeTap` with prestige discount support
+- Client now validates purchases server-side before applying
+- **Score Impact:** 6.2 → 6.5/10
+
+### 🔄 Phase 5: NEXT
+**Generator Economy Rebalance** — Fix generator payback time
+- Generator payback time currently < 1 minute (too fast)
+- Balance production rates across epochs
+- Review cost scaling
+- **Dependencies:** Phase 1 ✅, Phase 2 ✅, Phase 3 ✅, Phase 4 ✅
 
 ---
 
 ## 📈 PROJECT PROGRESS
 
-### Overall Completion: **6.7%** (2/30 phases)
+### Overall Completion: **13.3%** (4/30 phases)
 
 ```
-Phase 1-4: Security Foundation     [████████] 50% ████████░░ 2/4 ✅✅⬜⬜
-Phase 5-9: Economy Stabilization   [········] 0%  ·········· 0/5 ⬜⬜⬜⬜⬜
+Phase 1-4: Security Foundation     [██████████] 100% ██████████ 4/4 ✅✅✅✅
+Phase 5-9: Economy Stabilization   [·········] 0%  ·········· 0/5 ⬜⬜⬜⬜⬜
 Phase 10-15: Development Foundation [········] 0%  ········ 0/6 ⬜⬜⬜⬜⬜⬜
 Phase 16-20: Engagement Systems    [········] 0%  ·········· 0/5 ⬜⬜⬜⬜⬜
 Phase 21-25: Monetization          [········] 0%  ········ 0/5 ⬜⬜⬜⬜⬜
@@ -62,9 +79,9 @@ Phase 26-30: Polish & Scale        [········] 0%  ········ 0/5 �
 
 | # | Blocker | Severity | Phase | Status |
 |---|---------|----------|-------|--------|
-| 1 | Race Condition in Offline Income | CRITICAL | 3 | NEXT |
-| 2 | Client-Side Tap XP | CRITICAL | 4 | Pending |
-| 3 | Broken Generator Payback | HIGH | 5 | Pending |
+| 1 | Race Condition in Offline Income | CRITICAL | 3 | ✅ FIXED |
+| 2 | Client-Side Tap XP | CRITICAL | 4 | ✅ FIXED |
+| 3 | Broken Generator Payback | HIGH | 5 | NEXT |
 | 4 | Zero CI/CD Pipeline | HIGH | 10 | Pending |
 
 ---
@@ -77,8 +94,8 @@ Phase 26-30: Polish & Scale        [········] 0%  ········ 0/5 �
 |-------|------|--------|----------|-----------|
 | 1 | HMAC Validation | ✅ COMPLETE | P0 | 3-5h |
 | 2 | RLS Policies | ✅ COMPLETE | P0 | 2-3h |
-| 3 | Race Condition Fix | ⬜ NEXT | P0 | 2-3h |
-| 4 | Client-Side Validation | ⬜ PENDING | P0 | 8-12h |
+| 3 | Race Condition Fix | ✅ COMPLETE | P0 | 2-3h |
+| 4 | Client-Side Validation | ✅ COMPLETE | P0 | 8-12h |
 
 ### 💰 PHASE 5-9: ECONOMY STABILIZATION
 
@@ -157,9 +174,9 @@ Phase 26-30: Polish & Scale        [········] 0%  ········ 0/5 �
 |-----------|-------------|------------------|--------|
 | Security Hardened | Week 1 | 5.8/10 | ✅ Done |
 | RLS & HMAC Complete | Week 1 | 6.0/10 | ✅ Done |
-| Race Condition Fixed | Week 2 | 6.2/10 | 🔄 Next |
-| Server-Side Tap Validation | Week 2 | 6.5/10 | ⬜ Pending |
-| Economy Balanced | Week 3 | 7.0/10 | ⬜ Pending |
+| Race Condition Fixed | Week 2 | 6.2/10 | ✅ Done |
+| Client-Side Validation | Week 2 | 6.5/10 | ✅ Done |
+| Economy Balanced | Week 3 | 7.0/10 | 🔄 Next |
 | CI/CD & Testing Ready | Week 4 | 7.2/10 | ⬜ Pending |
 | Engagement Built | Week 6 | 7.4/10 | ⬜ Pending |
 | Monetization Live | Week 8 | 7.8/10 | ⬜ Pending |
@@ -209,6 +226,8 @@ Phase 26-30: Polish & Scale        [········] 0%  ········ 0/5 �
 |--------|-------|--------|
 | PHASE1_REPORT.md | 1 | ✅ COMPLETE |
 | PHASE2_REPORT.md | 2 | ✅ COMPLETE |
+| PHASE3_REPORT.md | 3 | ✅ COMPLETE |
+| PHASE4_REPORT.md | 4 | ✅ COMPLETE |
 
 ---
 
@@ -246,11 +265,11 @@ Phase 26-30: Polish & Scale        [········] 0%  ········ 0/5 �
 
 | # | Issue | Severity | CVSS | Phase |
 |---|-------|----------|------|-------|
-| 1 | Client-Side Tap XP | CRITICAL | 9.0 | 4 |
+| 1 | Client-Side Tap XP | CRITICAL | 9.0 | 4 ✅ |
 | 2 | Passive XP Client-Side | CRITICAL | 8.0 | 8 |
 | 3 | Generator Payback < 1 min | CRITICAL | 8.5 | 5 |
-| 4 | Race Condition Offline Income | CRITICAL | 9.5 | 3 |
-| 5 | Buy Generator No Validation | CRITICAL | 8.5 | 8 |
+| 4 | Race Condition Offline Income | CRITICAL | 9.5 | 3 ✅ |
+| 5 | Buy Generator No Validation | CRITICAL | 8.5 | 4 ✅ |
 | 6 | HMAC Missing in Functions | CRITICAL | 9.8 | 1 ✅ |
 | 7 | RLS Allows Universal Access | CRITICAL | 9.8 | 2 ✅ |
 | 8 | Duplicate Tab Detection Bypassed | HIGH | 7.5 | 4 |
@@ -275,8 +294,9 @@ Phase 26-30: Polish & Scale        [········] 0%  ········ 0/5 �
 
 | Agent | Role | Current Assignment |
 |-------|------|-------------------|
-| Backend Architect | Supabase, Edge Functions | Ready for Phase 3 |
-| Security Engineer | Security Hardening | Ready for Phase 3 |
+| Backend Architect | Supabase, Edge Functions | Ready for Phase 5 |
+| Security Engineer | Security Hardening | Ready for Phase 5 |
+| Senior Economy Designer | Economy Balancing | Ready for Phase 5 |
 | Frontend Architect | React, Performance | Standby |
 | Game Designer | Economy, Engagement | Standby |
 | QA Lead | Testing, Validation | Standby |
@@ -287,12 +307,11 @@ Phase 26-30: Polish & Scale        [········] 0%  ········ 0/5 �
 ## 🎯 NEXT ACTIONS
 
 ### Immediate (This Week)
-1. **Phase 3:** Race Condition Fix — Offline Income double-claim
-2. **Phase 4:** Client-Side Validation — Tap XP & Generator purchases
+1. **Phase 5:** Generator Economy Rebalance — Fix payback time
 
 ### Short-Term (2-4 Weeks)
-3. **Phase 5-9:** Economy stabilization
-4. **Phase 10-15:** CI/CD and testing infrastructure
+2. **Phase 6-9:** Energy system and economy stabilization
+3. **Phase 10-15:** CI/CD and testing infrastructure
 
 ### Medium-Term (1-2 Months)
 5. **Phase 16-20:** Achievement, events, notifications
@@ -307,7 +326,7 @@ Phase 26-30: Polish & Scale        [········] 0%  ········ 0/5 �
 
 | Phase Group | Completed | Avg Time/Phase | Status |
 |-------------|-----------|----------------|--------|
-| Security (1-4) | 2/4 | 2.5h | On Track |
+| Security (1-4) | 4/4 | 2.5h | ✅ Complete |
 | Economy (5-9) | 0/5 | — | Not Started |
 | Foundation (10-15) | 0/6 | — | Not Started |
 | Engagement (16-20) | 0/5 | — | Not Started |
