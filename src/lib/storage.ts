@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { GameState, EpochId, OwnedGenerator, LeaderboardEntry, ActiveBoosters, DailyTasksState, PrestigeResearch, DailyAdViews, Epoch } from '../types/game';
 import { getTelegramUserId, getTelegramUserInfo, getReferrerId } from './telegram';
 import { getCurrentEpochByLevel, EPOCHS } from '../data/epochs';
+import { rpcSaveGameState, rpcLoadGameState, rpcGetLeaderboard, rpcApplyReferralBonus, rpcGetUserRank, rpcFetchActiveBoosters } from './rpc';
 
 const LOCAL_STORAGE_KEY = 'ukraine_tap_game_state';
 const DEVICE_ID_KEY = 'ukraine_tap_device_id';
@@ -68,7 +69,7 @@ function estimatePassiveForEpoch(epoch: Epoch, levelInEpoch: number): number {
 
 function ensureJson<T>(value: T | string): T {
   if (typeof value === 'string') {
-    try { return JSON.parse(value) as T; } catch { }
+    try { return JSON.parse(value) as T; } catch { /* Return original value */ }
   }
   return value as T;
 }
@@ -154,41 +155,17 @@ export async function saveRemoteState(state: GameState): Promise<void> {
   };
 
   try {
+    // Use edge function for Telegram users (HMAC validated)
     if (telegramId) {
-      const { error } = await supabase
-        .from('game_progress')
-        .upsert({ ...payload, telegram_id: telegramId }, { onConflict: 'telegram_id' });
-      if (error) throw error;
-
-      await supabase
-        .from('game_progress')
-        .delete()
-        .eq('device_id', deviceId)
-        .is('telegram_id', null);
-    } else {
-      const { data: existing } = await supabase
-        .from('game_progress')
-        .select('id')
-        .eq('device_id', deviceId)
-        .is('telegram_id', null)
-        .maybeSingle();
-
-      if (existing) {
-        const { error } = await supabase
-          .from('game_progress')
-          .update(payload)
-          .eq('device_id', deviceId)
-          .is('telegram_id', null);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('game_progress')
-          .insert({ ...payload, device_id: deviceId });
-        if (error) throw error;
+      const result = await rpcSaveGameState(telegramId, payload, deviceId);
+      if (!result.success) {
+        console.error('Edge function save failed:', result.error);
       }
     }
+    // For non-Telegram users, skip remote save (they don't have init_data)
+    // This is a fallback - the localStorage save still works
   } catch (e) {
-    console.error('Supabase save failed:', e);
+    console.error('Remote save failed:', e);
   }
 }
 
@@ -199,27 +176,15 @@ export async function loadGameState(): Promise<GameState | null> {
 
   if (supabase) {
     try {
-      const { data } = telegramId
-        ? await supabase
-            .from('game_progress')
-            .select('*')
-            .eq('telegram_id', telegramId)
-            .maybeSingle()
-        : await supabase
-            .from('game_progress')
-            .select('*')
-            .eq('device_id', deviceId)
-            .is('telegram_id', null)
-            .maybeSingle();
-
-      if (data) {
-        if (telegramId) {
-          localStorage.removeItem(LOCAL_STORAGE_KEY);
-        }
-        return hydrateFromDb(data);
-      }
-
+      // Use edge function for Telegram users (HMAC validated)
       if (telegramId) {
+        const result = await rpcLoadGameState(telegramId);
+        if (result.data) {
+          localStorage.removeItem(LOCAL_STORAGE_KEY);
+          return hydrateFromDb(result.data);
+        }
+        
+        // New user - create record via edge function
         const userInfo = getTelegramUserInfo();
         let bonus = 20;
 
@@ -261,10 +226,11 @@ export async function loadGameState(): Promise<GameState | null> {
           last_online_at: new Date().toISOString(),
           session_start_at: new Date().toISOString(),
           daily_ad_views: {},
+          device_id: deviceId,
         };
 
-        const { error } = await supabase.from('game_progress').insert(newRow);
-        if (error) console.error('New user insert failed:', error);
+        // Save via edge function
+        await rpcSaveGameState(telegramId, newRow);
 
         const hasRef = Boolean(referrerId && referrerId !== telegramId);
         return {
@@ -415,87 +381,37 @@ function sanitizeLoadedState(parsed: GameState): GameState {
 }
 
 async function applyReferralBonus(newUserId: number, referrerId: number): Promise<void> {
-  if (!supabase) return;
-
-  const { error: e1 } = await supabase
-    .from('game_progress')
-    .update({
-      currency: supabase.rpc('increment_currency', { amount: REFERRER_BONUS }),
-      total_currency_earned: supabase.rpc('increment_currency', { amount: REFERRER_BONUS }),
-      referrals_count: supabase.rpc('increment_referrals'),
-      referral_earnings: supabase.rpc('increment_earnings', { amount: REFERRER_BONUS }),
-    })
-    .eq('telegram_id', referrerId);
-  if (e1) console.error('Failed to apply referral bonus:', e1);
+  // Use edge function for HMAC-validated referral bonus
+  const result = await rpcApplyReferralBonus(referrerId);
+  if (!result.success) {
+    console.error('Failed to apply referral bonus:', result.error);
+  }
 }
 
 export async function getLeaderboard(limit = 50): Promise<LeaderboardEntry[]> {
-  if (!supabase) return [];
-  try {
-    // Sort by prestige_level DESC, then level DESC, then total_xp DESC
-    const { data, error } = await supabase
-      .from('game_progress')
-      .select('telegram_id, first_name, username, level, total_xp, prestige_level, referrals_count')
-      .order('prestige_level', { ascending: false })
-      .order('level', { ascending: false })
-      .order('total_xp', { ascending: false })
-      .limit(limit);
-
-    if (error || !data) return [];
-
-    return data.map((row, index) => ({
-      telegram_id: row.telegram_id,
-      first_name: row.first_name,
-      username: row.username,
-      level: row.level,
-      total_xp: row.total_xp,
-      prestige_level: row.prestige_level || 0,
-      referrals_count: row.referrals_count || 0,
-      rank: index + 1,
-    }));
-  } catch (e) {
-    console.error('Leaderboard fetch failed:', e);
-    return [];
-  }
+  // Use edge function for leaderboard (Phase 2 RLS fix)
+  const data = await rpcGetLeaderboard(limit);
+  return data.map((row) => ({
+    telegram_id: row.telegram_id,
+    first_name: row.first_name,
+    username: row.username,
+    level: row.level,
+    total_xp: row.total_xp,
+    prestige_level: row.prestige_level || 0,
+    referrals_count: row.referrals_count || 0,
+    rank: row.rank,
+  }));
 }
 
 export async function getUserRank(telegramId: number): Promise<number | null> {
-  if (!supabase) return null;
-  try {
-    const { data } = await supabase
-      .from('game_progress')
-      .select('telegram_id, prestige_level, level, total_xp')
-      .order('prestige_level', { ascending: false })
-      .order('level', { ascending: false })
-      .order('total_xp', { ascending: false })
-      .limit(1000);
-
-    if (!data) return null;
-
-    const index = data.findIndex(row => row.telegram_id === telegramId);
-    return index >= 0 ? index + 1 : null;
-  } catch (e) {
-    console.error('User rank fetch failed:', e);
-    return null;
-  }
+  // Use edge function for user rank (Phase 2 RLS fix)
+  return rpcGetUserRank(telegramId);
 }
 
 export async function fetchActiveBoosters(telegramId: number): Promise<ActiveBoosters> {
-  if (!supabase) return {};
-  try {
-    const { data } = await supabase
-      .from('game_progress')
-      .select('active_boosters')
-      .eq('telegram_id', telegramId)
-      .maybeSingle();
-
-    const raw = (data?.active_boosters as ActiveBoosters) || {};
-    const { _daily: _ignored, ...clean } = raw;
-    void _ignored;
-    return clean;
-  } catch {
-    return {};
-  }
+  // Use edge function for active boosters (Phase 2 RLS fix)
+  const boosters = await rpcFetchActiveBoosters(telegramId);
+  return boosters as ActiveBoosters;
 }
 
 export function calculateOfflineCap(prestigeLevel: number): number {
