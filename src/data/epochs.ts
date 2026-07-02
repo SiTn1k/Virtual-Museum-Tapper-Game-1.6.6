@@ -21,99 +21,99 @@ const createGenerators = (templates: Array<{ id: string; icon: string; name: { u
 // ═══════════════════════════════════════════════════════════════════════════
 
 const trypilliaGenerators = createGenerators([
-  { id: 'clay_pit', icon: '🏺', name: { ua: 'Глиняна яма', en: 'Clay Pit' }, desc: { ua: 'Видобування глини', en: 'Clay extraction' }, baseCost: 10, baseProd: 2 },
-  { id: 'pottery', icon: '🎨', name: { ua: 'Гончарна майстерня', en: 'Pottery Workshop' }, desc: { ua: 'Виробництво кераміки', en: 'Ceramics production' }, baseCost: 50, baseProd: 8 },
-  { id: 'settlement', icon: '🏘️', name: { ua: 'Поселення', en: 'Settlement' }, desc: { ua: 'Трипільська община', en: 'Trypillian community' }, baseCost: 300, baseProd: 40 },
-  { id: 'megastructure', icon: '🏛️', name: { ua: 'Мега-структура', en: 'Mega-Structure' }, desc: { ua: 'Величезна споруда', en: 'Massive structure' }, baseCost: 3000, baseProd: 200 },
-  { id: 'temple', icon: '✨', name: { ua: 'Храм Богині', en: 'Temple of Goddess' }, desc: { ua: 'Священне місце', en: 'Sacred place' }, baseCost: 30000, baseProd: 1000 },
+  { id: 'clay_pit', icon: '🏺', name: { ua: 'Глиняна яма', en: 'Clay Pit' }, desc: { ua: 'Видобування глини', en: 'Clay extraction' }, baseCost: 90, baseProd: 2 },
+  { id: 'pottery', icon: '🎨', name: { ua: 'Гончарна майстерня', en: 'Pottery Workshop' }, desc: { ua: 'Виробництво кераміки', en: 'Ceramics production' }, baseCost: 360, baseProd: 8 },
+  { id: 'settlement', icon: '🏘️', name: { ua: 'Поселення', en: 'Settlement' }, desc: { ua: 'Трипільська община', en: 'Trypillian community' }, baseCost: 1800, baseProd: 40 },
+  { id: 'megastructure', icon: '🏛️', name: { ua: 'Мега-структура', en: 'Mega-Structure' }, desc: { ua: 'Величезна споруда', en: 'Massive structure' }, baseCost: 9000, baseProd: 200 },
+  { id: 'temple', icon: '✨', name: { ua: 'Храм Богині', en: 'Temple of Goddess' }, desc: { ua: 'Священне місце', en: 'Sacred place' }, baseCost: 45000, baseProd: 1000 },
 ]);
 
 const scythiaGenerators = createGenerators([
-  { id: 'pasture', icon: '🐎', name: { ua: 'Пасовище', en: 'Pasture' }, desc: { ua: 'Коні та худоба', en: 'Horses and cattle' }, baseCost: 10, baseProd: 5 },
-  { id: 'gold_mine', icon: '⛏️', name: { ua: 'Золота копальня', en: 'Gold Mine' }, desc: { ua: 'Скіфське золото', en: 'Scythian gold' }, baseCost: 50, baseProd: 20 },
-  { id: 'kurgan', icon: '🎖️', name: { ua: 'Курган', en: 'Kurgan' }, desc: { ua: 'Поховання', en: 'Burial mound' }, baseCost: 300, baseProd: 100 },
-  { id: 'fortress', icon: '🏰', name: { ua: 'Фортеця', en: 'Fortress' }, desc: { ua: 'Захисна споруда', en: 'Defensive structure' }, baseCost: 3000, baseProd: 500 },
-  { id: 'royal_tomb', icon: '👑', name: { ua: 'Царська гробниця', en: 'Royal Tomb' }, desc: { ua: 'Золота гробниця', en: 'Golden tomb' }, baseCost: 30000, baseProd: 2500 },
+  { id: 'pasture', icon: '🐎', name: { ua: 'Пасовище', en: 'Pasture' }, desc: { ua: 'Коні та худоба', en: 'Horses and cattle' }, baseCost: 90, baseProd: 3 },
+  { id: 'gold_mine', icon: '⛏️', name: { ua: 'Золота копальня', en: 'Gold Mine' }, desc: { ua: 'Скіфське золото', en: 'Scythian gold' }, baseCost: 450, baseProd: 12 },
+  { id: 'kurgan', icon: '🎖️', name: { ua: 'Курган', en: 'Kurgan' }, desc: { ua: 'Поховання', en: 'Burial mound' }, baseCost: 2250, baseProd: 60 },
+  { id: 'fortress', icon: '🏰', name: { ua: 'Фортеця', en: 'Fortress' }, desc: { ua: 'Захисна споруда', en: 'Defensive structure' }, baseCost: 11250, baseProd: 300 },
+  { id: 'royal_tomb', icon: '👑', name: { ua: 'Царська гробниця', en: 'Royal Tomb' }, desc: { ua: 'Золота гробниця', en: 'Golden tomb' }, baseCost: 56250, baseProd: 1500 },
 ]);
 
 const antiquityGenerators = createGenerators([
-  { id: 'port', icon: '⚓', name: { ua: 'Порт', en: 'Port' }, desc: { ua: 'Торговий порт', en: 'Trading port' }, baseCost: 10, baseProd: 10 },
-  { id: 'agora', icon: '🏛', name: { ua: 'Агора', en: 'Agora' }, desc: { ua: 'Торговельна площа', en: 'Market square' }, baseCost: 50, baseProd: 40 },
-  { id: 'colony', icon: '🏪', name: { ua: 'Грецька колонія', en: 'Greek Colony' }, desc: { ua: 'Ольвія, Херсонес', en: 'Olbia, Chersonesus' }, baseCost: 300, baseProd: 200 },
-  { id: 'amphitheater', icon: '🎭', name: { ua: 'Амфітеатр', en: 'Amphitheater' }, desc: { ua: 'Культурний центр', en: 'Cultural center' }, baseCost: 3000, baseProd: 1000 },
-  { id: 'acropolis', icon: '🏛️', name: { ua: 'Акрополь', en: 'Acropolis' }, desc: { ua: 'Верхнє місто', en: 'Upper city' }, baseCost: 30000, baseProd: 5000 },
+  { id: 'port', icon: '⚓', name: { ua: 'Порт', en: 'Port' }, desc: { ua: 'Торговий порт', en: 'Trading port' }, baseCost: 120, baseProd: 4 },
+  { id: 'agora', icon: '🏛', name: { ua: 'Агора', en: 'Agora' }, desc: { ua: 'Торговельна площа', en: 'Market square' }, baseCost: 600, baseProd: 16 },
+  { id: 'colony', icon: '🏪', name: { ua: 'Грецька колонія', en: 'Greek Colony' }, desc: { ua: 'Ольвія, Херсонес', en: 'Olbia, Chersonesus' }, baseCost: 3000, baseProd: 80 },
+  { id: 'amphitheater', icon: '🎭', name: { ua: 'Амфітеатр', en: 'Amphitheater' }, desc: { ua: 'Культурний центр', en: 'Cultural center' }, baseCost: 15000, baseProd: 400 },
+  { id: 'acropolis', icon: '🏛️', name: { ua: 'Акрополь', en: 'Acropolis' }, desc: { ua: 'Верхнє місто', en: 'Upper city' }, baseCost: 75000, baseProd: 2000 },
 ]);
 
 const kyivRusGenerators = createGenerators([
-  { id: 'field', icon: '🌾', name: { ua: 'Поле', en: 'Field' }, desc: { ua: 'Землеробство', en: 'Agriculture' }, baseCost: 10, baseProd: 15 },
-  { id: 'craft_workshop', icon: '⚒️', name: { ua: 'Реміснича майстерня', en: 'Craft Workshop' }, desc: { ua: 'Ремесла', en: 'Crafts' }, baseCost: 50, baseProd: 60 },
-  { id: 'city', icon: '🏰', name: { ua: 'Місто', en: 'City' }, desc: { ua: 'Київ, Чернігів', en: 'Kyiv, Chernihiv' }, baseCost: 300, baseProd: 300 },
-  { id: 'saint_sophia', icon: '☦️', name: { ua: 'Софійський собор', en: 'St. Sophia Cathedral' }, desc: { ua: 'Головна святиня', en: 'Main shrine' }, baseCost: 3000, baseProd: 1500 },
-  { id: 'golden_gate', icon: '🚪', name: { ua: 'Золоті ворота', en: 'Golden Gate' }, desc: { ua: 'Головна брама Києва', en: 'Main gate of Kyiv' }, baseCost: 30000, baseProd: 7500 },
+  { id: 'field', icon: '🌾', name: { ua: 'Поле', en: 'Field' }, desc: { ua: 'Землеробство', en: 'Agriculture' }, baseCost: 180, baseProd: 6 },
+  { id: 'craft_workshop', icon: '⚒️', name: { ua: 'Реміснича майстерня', en: 'Craft Workshop' }, desc: { ua: 'Ремесла', en: 'Crafts' }, baseCost: 900, baseProd: 24 },
+  { id: 'city', icon: '🏰', name: { ua: 'Місто', en: 'City' }, desc: { ua: 'Київ, Чернігів', en: 'Kyiv, Chernihiv' }, baseCost: 4500, baseProd: 120 },
+  { id: 'saint_sophia', icon: '☦️', name: { ua: 'Софійський собор', en: 'St. Sophia Cathedral' }, desc: { ua: 'Головна святиня', en: 'Main shrine' }, baseCost: 22500, baseProd: 600 },
+  { id: 'golden_gate', icon: '🚪', name: { ua: 'Золоті ворота', en: 'Golden Gate' }, desc: { ua: 'Головна брама Києва', en: 'Main gate of Kyiv' }, baseCost: 112500, baseProd: 3000 },
 ]);
 
 const halychVolhyniaGenerators = createGenerators([
-  { id: 'salt_mine', icon: '🧂', name: { ua: 'Соляна копальня', en: 'Salt Mine' }, desc: { ua: 'Видобуток солі', en: 'Salt extraction' }, baseCost: 10, baseProd: 20 },
-  { id: 'caravan', icon: '🐪', name: { ua: 'Купецький караван', en: 'Merchant Caravan' }, desc: { ua: 'Торгівля', en: 'Trade' }, baseCost: 50, baseProd: 80 },
-  { id: 'castle', icon: '🏯', name: { ua: 'Замок', en: 'Castle' }, desc: { ua: 'Львів, Камянець', en: 'Lviv, Kamenets' }, baseCost: 300, baseProd: 400 },
-  { id: 'cathedral', icon: '⛪', name: { ua: 'Собор', en: 'Cathedral' }, desc: { ua: 'Релігійний центр', en: 'Religious center' }, baseCost: 3000, baseProd: 2000 },
-  { id: 'principality', icon: '👑', name: { ua: 'Князівство', en: 'Principality' }, desc: { ua: 'Данило Галицький', en: 'Danylo of Halych' }, baseCost: 30000, baseProd: 10000 },
+  { id: 'salt_mine', icon: '🧂', name: { ua: 'Соляна копальня', en: 'Salt Mine' }, desc: { ua: 'Видобуток солі', en: 'Salt extraction' }, baseCost: 360, baseProd: 12 },
+  { id: 'caravan', icon: '🐪', name: { ua: 'Купецький караван', en: 'Merchant Caravan' }, desc: { ua: 'Торгівля', en: 'Trade' }, baseCost: 1800, baseProd: 48 },
+  { id: 'castle', icon: '🏯', name: { ua: 'Замок', en: 'Castle' }, desc: { ua: 'Львів, Камянець', en: 'Lviv, Kamenets' }, baseCost: 9000, baseProd: 240 },
+  { id: 'cathedral', icon: '⛪', name: { ua: 'Собор', en: 'Cathedral' }, desc: { ua: 'Релігійний центр', en: 'Religious center' }, baseCost: 45000, baseProd: 1200 },
+  { id: 'principality', icon: '👑', name: { ua: 'Князівство', en: 'Principality' }, desc: { ua: 'Данило Галицький', en: 'Danylo of Halych' }, baseCost: 225000, baseProd: 6000 },
 ]);
 
 const polishLithuanianGenerators = createGenerators([
-  { id: 'manor', icon: '🏡', name: { ua: 'Маєток', en: 'Manor' }, desc: { ua: 'Шляхетська власність', en: 'Noble estate' }, baseCost: 10, baseProd: 25 },
-  { id: 'market', icon: '🛒', name: { ua: 'Ринок', en: 'Market' }, desc: { ua: 'Торгівля', en: 'Trade' }, baseCost: 50, baseProd: 100 },
-  { id: 'cossack_sich', icon: '⚔️', name: { ua: 'Січ', en: 'Sich' }, desc: { ua: 'Запорозька Січ', en: 'Zaporizhian Sich' }, baseCost: 300, baseProd: 500 },
-  { id: 'brotherhood', icon: '📚', name: { ua: 'Братство', en: 'Brotherhood' }, desc: { ua: 'Культурний рух', en: 'Cultural movement' }, baseCost: 3000, baseProd: 2500 },
-  { id: 'university', icon: '🎓', name: { ua: 'Острозька академія', en: 'Ostroh Academy' }, desc: { ua: 'Перший університет', en: 'First university' }, baseCost: 30000, baseProd: 12500 },
+  { id: 'manor', icon: '🏡', name: { ua: 'Маєток', en: 'Manor' }, desc: { ua: 'Шляхетська власність', en: 'Noble estate' }, baseCost: 600, baseProd: 20 },
+  { id: 'market', icon: '🛒', name: { ua: 'Ринок', en: 'Market' }, desc: { ua: 'Торгівля', en: 'Trade' }, baseCost: 3000, baseProd: 80 },
+  { id: 'cossack_sich', icon: '⚔️', name: { ua: 'Січ', en: 'Sich' }, desc: { ua: 'Запорозька Січ', en: 'Zaporizhian Sich' }, baseCost: 15000, baseProd: 400 },
+  { id: 'brotherhood', icon: '📚', name: { ua: 'Братство', en: 'Brotherhood' }, desc: { ua: 'Культурний рух', en: 'Cultural movement' }, baseCost: 75000, baseProd: 2000 },
+  { id: 'university', icon: '🎓', name: { ua: 'Острозька академія', en: 'Ostroh Academy' }, desc: { ua: 'Перший університет', en: 'First university' }, baseCost: 375000, baseProd: 10000 },
 ]);
 
 const cossackGenerators = createGenerators([
-  { id: 'homestead', icon: '🏠', name: { ua: 'Хутір', en: 'Homestead' }, desc: { ua: 'Козацьке господарство', en: 'Cossack farm' }, baseCost: 10, baseProd: 30 },
-  { id: 'cannon', icon: '💣', name: { ua: 'Гармата', en: 'Cannon' }, desc: { ua: 'Артилерія', en: 'Artillery' }, baseCost: 50, baseProd: 120 },
-  { id: 'regiment', icon: '⚠️', name: { ua: 'Полк', en: 'Regiment' }, desc: { ua: 'Козацьке військо', en: 'Cossack army' }, baseCost: 300, baseProd: 600 },
-  { id: 'fortress_sich', icon: '🏰', name: { ua: 'Фортеця Січ', en: 'Sich Fortress' }, desc: { ua: 'Головна база', en: 'Main base' }, baseCost: 3000, baseProd: 3000 },
-  { id: 'hetman_capital', icon: '🏛️', name: { ua: 'Гетьманська столиця', en: "Hetman's Capital" }, desc: { ua: 'Чигирин, Глухів', en: 'Chyhyryn, Hlukhiv' }, baseCost: 30000, baseProd: 15000 },
+  { id: 'homestead', icon: '🏠', name: { ua: 'Хутір', en: 'Homestead' }, desc: { ua: 'Козацьке господарство', en: 'Cossack farm' }, baseCost: 1200, baseProd: 40 },
+  { id: 'cannon', icon: '💣', name: { ua: 'Гармата', en: 'Cannon' }, desc: { ua: 'Артилерія', en: 'Artillery' }, baseCost: 6000, baseProd: 160 },
+  { id: 'regiment', icon: '⚠️', name: { ua: 'Полк', en: 'Regiment' }, desc: { ua: 'Козацьке військо', en: 'Cossack army' }, baseCost: 30000, baseProd: 800 },
+  { id: 'fortress_sich', icon: '🏰', name: { ua: 'Фортеця Січ', en: 'Sich Fortress' }, desc: { ua: 'Головна база', en: 'Main base' }, baseCost: 150000, baseProd: 4000 },
+  { id: 'hetman_capital', icon: '🏛️', name: { ua: 'Гетьманська столиця', en: "Hetman's Capital" }, desc: { ua: 'Чигирин, Глухів', en: 'Chyhyryn, Hlukhiv' }, baseCost: 750000, baseProd: 20000 },
 ]);
 
 const hetmanateGenerators = createGenerators([
-  { id: 'farm', icon: '🐄', name: { ua: 'Ферма', en: 'Farm' }, desc: { ua: 'Сільське господарство', en: 'Agriculture' }, baseCost: 10, baseProd: 40 },
-  { id: 'factory', icon: '🏭', name: { ua: 'Мануфактура', en: 'Manufactory' }, desc: { ua: 'Рання промисловість', en: 'Early industry' }, baseCost: 50, baseProd: 160 },
-  { id: 'gymnasium', icon: '📖', name: { ua: 'Гімназія', en: 'Gymnasium' }, desc: { ua: 'Освіта', en: 'Education' }, baseCost: 300, baseProd: 800 },
-  { id: 'theater', icon: '🎭', name: { ua: 'Театр', en: 'Theater' }, desc: { ua: 'Культура', en: 'Culture' }, baseCost: 3000, baseProd: 4000 },
-  { id: 'railway', icon: '🚂', name: { ua: 'Залізниця', en: 'Railway' }, desc: { ua: 'Транспорт', en: 'Transport' }, baseCost: 30000, baseProd: 20000 },
+  { id: 'farm', icon: '🐄', name: { ua: 'Ферма', en: 'Farm' }, desc: { ua: 'Сільське господарство', en: 'Agriculture' }, baseCost: 2400, baseProd: 80 },
+  { id: 'factory', icon: '🏭', name: { ua: 'Мануфактура', en: 'Manufactory' }, desc: { ua: 'Рання промисловість', en: 'Early industry' }, baseCost: 12000, baseProd: 320 },
+  { id: 'gymnasium', icon: '📖', name: { ua: 'Гімназія', en: 'Gymnasium' }, desc: { ua: 'Освіта', en: 'Education' }, baseCost: 60000, baseProd: 1600 },
+  { id: 'theater', icon: '🎭', name: { ua: 'Театр', en: 'Theater' }, desc: { ua: 'Культура', en: 'Culture' }, baseCost: 300000, baseProd: 8000 },
+  { id: 'railway', icon: '🚂', name: { ua: 'Залізниця', en: 'Railway' }, desc: { ua: 'Транспорт', en: 'Transport' }, baseCost: 1500000, baseProd: 40000 },
 ]);
 
 const empireGenerators = createGenerators([
-  { id: 'manor_estate', icon: '🏛️', name: { ua: 'Панський маєток', en: 'Manor Estate' }, desc: { ua: 'Аграрна економіка', en: 'Agricultural economy' }, baseCost: 10, baseProd: 50 },
-  { id: 'ironworks', icon: '⚙️', name: { ua: 'Металургійний завод', en: 'Ironworks' }, desc: { ua: 'Промислова революція', en: 'Industrial revolution' }, baseCost: 50, baseProd: 200 },
-  { id: 'university_kyiv', icon: '🎓', name: { ua: 'Київський університет', en: 'Kyiv University' }, desc: { ua: 'Вища освіта', en: 'Higher education' }, baseCost: 300, baseProd: 1000 },
-  { id: 'railway_network', icon: '🚂', name: { ua: 'Залізнична мережа', en: 'Railway Network' }, desc: { ua: 'Транспортна система', en: 'Transport system' }, baseCost: 3000, baseProd: 5000 },
-  { id: 'cultural_society', icon: '📚', name: { ua: 'Просвітницьке товариство', en: 'Cultural Society' }, desc: { ua: 'Національний рух', en: 'National movement' }, baseCost: 30000, baseProd: 25000 },
+  { id: 'manor_estate', icon: '🏛️', name: { ua: 'Панський маєток', en: 'Manor Estate' }, desc: { ua: 'Аграрна економіка', en: 'Agricultural economy' }, baseCost: 4800, baseProd: 160 },
+  { id: 'ironworks', icon: '⚙️', name: { ua: 'Металургійний завод', en: 'Ironworks' }, desc: { ua: 'Промислова революція', en: 'Industrial revolution' }, baseCost: 24000, baseProd: 640 },
+  { id: 'university_kyiv', icon: '🎓', name: { ua: 'Київський університет', en: 'Kyiv University' }, desc: { ua: 'Вища освіта', en: 'Higher education' }, baseCost: 120000, baseProd: 3200 },
+  { id: 'railway_network', icon: '🚂', name: { ua: 'Залізнична мережа', en: 'Railway Network' }, desc: { ua: 'Транспортна система', en: 'Transport system' }, baseCost: 600000, baseProd: 16000 },
+  { id: 'cultural_society', icon: '📚', name: { ua: 'Просвітницьке товариство', en: 'Cultural Society' }, desc: { ua: 'Національний рух', en: 'National movement' }, baseCost: 3000000, baseProd: 80000 },
 ]);
 
 const revolutionGenerators = createGenerators([
-  { id: 'workers_club', icon: '🏭', name: { ua: 'Робітничий клуб', en: 'Workers Club' }, desc: { ua: 'Революційний центр', en: 'Revolutionary center' }, baseCost: 10, baseProd: 60 },
-  { id: 'military_council', icon: '⚔️', name: { ua: 'Військова рада', en: 'Military Council' }, desc: { ua: 'Військове керівництво', en: 'Military command' }, baseCost: 50, baseProd: 240 },
-  { id: 'national_parliament', icon: '🏛️', name: { ua: 'Центральна Рада', en: 'Central Council' }, desc: { ua: 'Перший парламент', en: 'First parliament' }, baseCost: 300, baseProd: 1200 },
-  { id: 'national_press', icon: '📰', name: { ua: 'Національна преса', en: 'National Press' }, desc: { ua: 'Інформаційний центр', en: 'Information center' }, baseCost: 3000, baseProd: 6000 },
-  { id: 'independence_square', icon: '🇺🇦', name: { ua: 'Площа Незалежності', en: 'Independence Square' }, desc: { ua: 'Символ свободи', en: 'Symbol of freedom' }, baseCost: 30000, baseProd: 30000 },
+  { id: 'workers_club', icon: '🏭', name: { ua: 'Робітничий клуб', en: 'Workers Club' }, desc: { ua: 'Революційний центр', en: 'Revolutionary center' }, baseCost: 9600, baseProd: 320 },
+  { id: 'military_council', icon: '⚔️', name: { ua: 'Військова рада', en: 'Military Council' }, desc: { ua: 'Військове керівництво', en: 'Military command' }, baseCost: 48000, baseProd: 1280 },
+  { id: 'national_parliament', icon: '🏛️', name: { ua: 'Центральна Рада', en: 'Central Council' }, desc: { ua: 'Перший парламент', en: 'First parliament' }, baseCost: 240000, baseProd: 6400 },
+  { id: 'national_press', icon: '📰', name: { ua: 'Національна преса', en: 'National Press' }, desc: { ua: 'Інформаційний центр', en: 'Information center' }, baseCost: 1200000, baseProd: 32000 },
+  { id: 'independence_square', icon: '🇺🇦', name: { ua: 'Площа Незалежності', en: 'Independence Square' }, desc: { ua: 'Символ свободи', en: 'Symbol of freedom' }, baseCost: 6000000, baseProd: 160000 },
 ]);
 
 const sovietGenerators = createGenerators([
-  { id: 'collective_farm', icon: '🌾', name: { ua: 'Колгосп', en: 'Collective Farm' }, desc: { ua: 'Сільське господарство', en: 'Agriculture' }, baseCost: 10, baseProd: 70 },
-  { id: 'industrial_plant', icon: '🏭', name: { ua: 'Промисловий завод', en: 'Industrial Plant' }, desc: { ua: 'Важка промисловість', en: 'Heavy industry' }, baseCost: 50, baseProd: 280 },
-  { id: 'research_institute', icon: '🔬', name: { ua: 'Науково-дослідний інститут', en: 'Research Institute' }, desc: { ua: 'Наука та розробки', en: 'Science and research' }, baseCost: 300, baseProd: 1400 },
-  { id: 'space_center', icon: '🚀', name: { ua: 'Космічний центр', en: 'Space Center' }, desc: { ua: 'Космічні технології', en: 'Space technology' }, baseCost: 3000, baseProd: 7000 },
-  { id: 'chornobyl', icon: '☢️', name: { ua: 'Чорнобильська АЕС', en: 'Chernobyl NPP' }, desc: { ua: 'Ядерна енергія', en: 'Nuclear power' }, baseCost: 30000, baseProd: 35000 },
+  { id: 'collective_farm', icon: '🌾', name: { ua: 'Колгосп', en: 'Collective Farm' }, desc: { ua: 'Сільське господарство', en: 'Agriculture' }, baseCost: 19200, baseProd: 640 },
+  { id: 'industrial_plant', icon: '🏭', name: { ua: 'Промисловий завод', en: 'Industrial Plant' }, desc: { ua: 'Важка промисловість', en: 'Heavy industry' }, baseCost: 96000, baseProd: 2560 },
+  { id: 'research_institute', icon: '🔬', name: { ua: 'Науково-дослідний інститут', en: 'Research Institute' }, desc: { ua: 'Наука та розробки', en: 'Science and research' }, baseCost: 480000, baseProd: 12800 },
+  { id: 'space_center', icon: '🚀', name: { ua: 'Космічний центр', en: 'Space Center' }, desc: { ua: 'Космічні технології', en: 'Space technology' }, baseCost: 2400000, baseProd: 64000 },
+  { id: 'chornobyl', icon: '☢️', name: { ua: 'Чорнобильська АЕС', en: 'Chernobyl NPP' }, desc: { ua: 'Ядерна енергія', en: 'Nuclear power' }, baseCost: 12000000, baseProd: 320000 },
 ]);
 
 const independenceGenerators = createGenerators([
-  { id: 'private_enterprise', icon: '💼', name: { ua: 'Приватне підприємство', en: 'Private Enterprise' }, desc: { ua: 'Приватизація', en: 'Privatization' }, baseCost: 10, baseProd: 80 },
-  { id: 'it_company', icon: '💻', name: { ua: 'IT-компанія', en: 'IT Company' }, desc: { ua: 'Технологічний сектор', en: 'Tech sector' }, baseCost: 50, baseProd: 320 },
-  { id: 'european_union_deal', icon: '🇪🇺', name: { ua: 'Угода з ЄС', en: 'EU Association Deal' }, desc: { ua: 'Європейська інтеграція', en: 'European integration' }, baseCost: 300, baseProd: 1600 },
-  { id: 'modern_infrastructure', icon: '🌉', name: { ua: 'Сучасна інфраструктура', en: 'Modern Infrastructure' }, desc: { ua: 'Мости та дороги', en: 'Bridges and roads' }, baseCost: 3000, baseProd: 8000 },
-  { id: 'digital_nation', icon: '🌐', name: { ua: 'Цифрова держава', en: 'Digital Nation' }, desc: { ua: 'Електронні послуги', en: 'E-government' }, baseCost: 30000, baseProd: 40000 },
+  { id: 'private_enterprise', icon: '💼', name: { ua: 'Приватне підприємство', en: 'Private Enterprise' }, desc: { ua: 'Приватизація', en: 'Privatization' }, baseCost: 38400, baseProd: 1280 },
+  { id: 'it_company', icon: '💻', name: { ua: 'IT-компанія', en: 'IT Company' }, desc: { ua: 'Технологічний сектор', en: 'Tech sector' }, baseCost: 192000, baseProd: 5120 },
+  { id: 'european_union_deal', icon: '🇪🇺', name: { ua: 'Угода з ЄС', en: 'EU Association Deal' }, desc: { ua: 'Європейська інтеграція', en: 'European integration' }, baseCost: 960000, baseProd: 25600 },
+  { id: 'modern_infrastructure', icon: '🌉', name: { ua: 'Сучасна інфраструктура', en: 'Modern Infrastructure' }, desc: { ua: 'Мости та дороги', en: 'Bridges and roads' }, baseCost: 4800000, baseProd: 128000 },
+  { id: 'digital_nation', icon: '🌐', name: { ua: 'Цифрова держава', en: 'Digital Nation' }, desc: { ua: 'Електронні послуги', en: 'E-government' }, baseCost: 24000000, baseProd: 640000 },
 ]);
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -121,67 +121,67 @@ const independenceGenerators = createGenerators([
 // ═══════════════════════════════════════════════════════════════════════════
 
 const egyptGenerators = createGenerators([
-  { id: 'pyramid_stone', icon: '🧱', name: { ua: 'Каменоломня', en: 'Stone Quarry' }, desc: { ua: 'Добування каменю', en: 'Stone extraction' }, baseCost: 15, baseProd: 100 },
-  { id: 'nile_agriculture', icon: '🌾', name: { ua: 'Сільське господарство', en: 'Nile Agriculture' }, desc: { ua: 'Землеробство біля Нілу', en: 'Agriculture by Nile' }, baseCost: 75, baseProd: 400 },
-  { id: 'pharaoh_palace', icon: '🏛️', name: { ua: 'Палац фараона', en: 'Pharaoh Palace' }, desc: { ua: 'Царська резиденція', en: 'Royal residence' }, baseCost: 450, baseProd: 2000 },
-  { id: 'temple_complex', icon: '⛩️', name: { ua: 'Храмовий комплекс', en: 'Temple Complex' }, desc: { ua: 'Релігійний центр', en: 'Religious center' }, baseCost: 4500, baseProd: 10000 },
-  { id: 'great_pyramid', icon: '🔺', name: { ua: 'Велика піраміда', en: 'Great Pyramid' }, desc: { ua: 'Чудо світу', en: 'Wonder of the world' }, baseCost: 45000, baseProd: 50000 },
+  { id: 'pyramid_stone', icon: '🧱', name: { ua: 'Каменоломня', en: 'Stone Quarry' }, desc: { ua: 'Добування каменю', en: 'Stone extraction' }, baseCost: 60000, baseProd: 2000 },
+  { id: 'nile_agriculture', icon: '🌾', name: { ua: 'Сільське господарство', en: 'Nile Agriculture' }, desc: { ua: 'Землеробство біля Нілу', en: 'Agriculture by Nile' }, baseCost: 300000, baseProd: 8000 },
+  { id: 'pharaoh_palace', icon: '🏛️', name: { ua: 'Палац фараона', en: 'Pharaoh Palace' }, desc: { ua: 'Царська резиденція', en: 'Royal residence' }, baseCost: 1500000, baseProd: 40000 },
+  { id: 'temple_complex', icon: '⛩️', name: { ua: 'Храмовий комплекс', en: 'Temple Complex' }, desc: { ua: 'Релігійний центр', en: 'Religious center' }, baseCost: 7500000, baseProd: 200000 },
+  { id: 'great_pyramid', icon: '🔺', name: { ua: 'Велика піраміда', en: 'Great Pyramid' }, desc: { ua: 'Чудо світу', en: 'Wonder of the world' }, baseCost: 37500000, baseProd: 1000000 },
 ]);
 
 const greeceGenerators = createGenerators([
-  { id: 'agora_market', icon: '🏪', name: { ua: 'Агора', en: 'Agora Market' }, desc: { ua: 'Торговий центр', en: 'Trading center' }, baseCost: 15, baseProd: 120 },
-  { id: 'gymnasium_athens', icon: '🏟️', name: { ua: 'Гімнасій', en: 'Gymnasium' }, desc: { ua: 'Освітній заклад', en: 'Educational institution' }, baseCost: 75, baseProd: 480 },
-  { id: 'oracle_delphi', icon: '🔮', name: { ua: 'Оракул Дельфів', en: 'Oracle of Delphi' }, desc: { ua: 'Провісниця', en: 'Prophet' }, baseCost: 450, baseProd: 2400 },
-  { id: 'parthenon', icon: '🏛️', name: { ua: 'Парфенон', en: 'Parthenon' }, desc: { ua: 'Храм Афіни', en: 'Temple of Athena' }, baseCost: 4500, baseProd: 12000 },
-  { id: 'alexander_empire', icon: '👑', name: { ua: 'Імперія Олександра', en: 'Alexander Empire' }, desc: { ua: 'Велика держава', en: 'Great empire' }, baseCost: 45000, baseProd: 60000 },
+  { id: 'agora_market', icon: '🏪', name: { ua: 'Агора', en: 'Agora Market' }, desc: { ua: 'Торговий центр', en: 'Trading center' }, baseCost: 72000, baseProd: 2400 },
+  { id: 'gymnasium_athens', icon: '🏟️', name: { ua: 'Гімнасій', en: 'Gymnasium' }, desc: { ua: 'Освітній заклад', en: 'Educational institution' }, baseCost: 360000, baseProd: 9600 },
+  { id: 'oracle_delphi', icon: '🔮', name: { ua: 'Оракул Дельфів', en: 'Oracle of Delphi' }, desc: { ua: 'Провісниця', en: 'Prophet' }, baseCost: 1800000, baseProd: 48000 },
+  { id: 'parthenon', icon: '🏛️', name: { ua: 'Парфенон', en: 'Parthenon' }, desc: { ua: 'Храм Афіни', en: 'Temple of Athena' }, baseCost: 9000000, baseProd: 240000 },
+  { id: 'alexander_empire', icon: '👑', name: { ua: 'Імперія Олександра', en: 'Alexander Empire' }, desc: { ua: 'Велика держава', en: 'Great empire' }, baseCost: 45000000, baseProd: 1200000 },
 ]);
 
 const romeGenerators = createGenerators([
-  { id: 'roman_forum', icon: '🏛️', name: { ua: 'Римський форум', en: 'Roman Forum' }, desc: { ua: 'Політичний центр', en: 'Political center' }, baseCost: 20, baseProd: 150 },
-  { id: 'colosseum', icon: '🎭', name: { ua: 'Колізей', en: 'Colosseum' }, desc: { ua: 'Амфітеатр', en: 'Amphitheater' }, baseCost: 100, baseProd: 600 },
-  { id: 'roman_aqueduct', icon: '🌉', name: { ua: 'Акведук', en: 'Aqueduct' }, desc: { ua: 'Водопостачання', en: 'Water supply' }, baseCost: 600, baseProd: 3000 },
-  { id: 'roman_legion', icon: '⚔️', name: { ua: 'Римський легіон', en: 'Roman Legion' }, desc: { ua: 'Військові сили', en: 'Military forces' }, baseCost: 6000, baseProd: 15000 },
-  { id: 'imperial_palace', icon: '🏰', name: { ua: 'Імператорський палац', en: 'Imperial Palace' }, desc: { ua: 'Резиденція цезаря', en: "Caesar's residence" }, baseCost: 60000, baseProd: 75000 },
+  { id: 'roman_forum', icon: '🏛️', name: { ua: 'Римський форум', en: 'Roman Forum' }, desc: { ua: 'Політичний центр', en: 'Political center' }, baseCost: 96000, baseProd: 3200 },
+  { id: 'colosseum', icon: '🎭', name: { ua: 'Колізей', en: 'Colosseum' }, desc: { ua: 'Амфітеатр', en: 'Amphitheater' }, baseCost: 480000, baseProd: 12800 },
+  { id: 'roman_aqueduct', icon: '🌉', name: { ua: 'Акведук', en: 'Aqueduct' }, desc: { ua: 'Водопостачання', en: 'Water supply' }, baseCost: 2400000, baseProd: 64000 },
+  { id: 'roman_legion', icon: '⚔️', name: { ua: 'Римський легіон', en: 'Roman Legion' }, desc: { ua: 'Військові сили', en: 'Military forces' }, baseCost: 12000000, baseProd: 320000 },
+  { id: 'imperial_palace', icon: '🏰', name: { ua: 'Імператорський палац', en: 'Imperial Palace' }, desc: { ua: 'Резиденція цезаря', en: "Caesar's residence" }, baseCost: 60000000, baseProd: 1600000 },
 ]);
 
 const medievalGenerators = createGenerators([
-  { id: 'medieval_village', icon: '🏘️', name: { ua: 'Середньовічне селище', en: 'Medieval Village' }, desc: { ua: 'Селянська громада', en: 'Peasant community' }, baseCost: 20, baseProd: 180 },
-  { id: 'cathedral_church', icon: '⛪', name: { ua: 'Кафедральний собор', en: 'Cathedral' }, desc: { ua: 'Релігійний центр', en: 'Religious center' }, baseCost: 100, baseProd: 720 },
-  { id: 'feudal_castle', icon: '🏰', name: { ua: 'Феодальний замок', en: 'Feudal Castle' }, desc: { ua: 'Замок феодала', en: "Feudal's castle" }, baseCost: 600, baseProd: 3600 },
-  { id: 'crusader_order', icon: '⚜️', name: { ua: 'Орден хрестоносців', en: 'Crusader Order' }, desc: { ua: 'Лицарський орден', en: 'Knight order' }, baseCost: 6000, baseProd: 18000 },
-  { id: 'royal_palace_medieval', icon: '👑', name: { ua: 'Королівський палац', en: 'Royal Palace' }, desc: { ua: 'Резиденція короля', en: "King's residence" }, baseCost: 60000, baseProd: 90000 },
+  { id: 'medieval_village', icon: '🏘️', name: { ua: 'Середньовічне селище', en: 'Medieval Village' }, desc: { ua: 'Селянська громада', en: 'Peasant community' }, baseCost: 120000, baseProd: 4000 },
+  { id: 'cathedral_church', icon: '⛪', name: { ua: 'Кафедральний собор', en: 'Cathedral' }, desc: { ua: 'Релігійний центр', en: 'Religious center' }, baseCost: 600000, baseProd: 16000 },
+  { id: 'feudal_castle', icon: '🏰', name: { ua: 'Феодальний замок', en: 'Feudal Castle' }, desc: { ua: 'Замок феодала', en: "Feudal's castle" }, baseCost: 3000000, baseProd: 80000 },
+  { id: 'crusader_order', icon: '⚜️', name: { ua: 'Орден хрестоносців', en: 'Crusader Order' }, desc: { ua: 'Лицарський орден', en: 'Knight order' }, baseCost: 15000000, baseProd: 400000 },
+  { id: 'royal_palace_medieval', icon: '👑', name: { ua: 'Королівський палац', en: 'Royal Palace' }, desc: { ua: 'Резиденція короля', en: "King's residence" }, baseCost: 75000000, baseProd: 2000000 },
 ]);
 
 const renaissanceGenerators = createGenerators([
-  { id: 'art_studio', icon: '🎨', name: { ua: 'Художня майстерня', en: 'Art Studio' }, desc: { ua: 'Творчість митців', en: 'Artists creativity' }, baseCost: 25, baseProd: 220 },
-  { id: 'printing_press', icon: '📖', name: { ua: 'Друкарський верстат', en: 'Printing Press' }, desc: { ua: 'Книгодрукування', en: 'Book printing' }, baseCost: 125, baseProd: 880 },
-  { id: 'renaissance_academy', icon: '🎓', name: { ua: 'Академія мистецтв', en: 'Renaissance Academy' }, desc: { ua: 'Освітній центр', en: 'Educational center' }, baseCost: 750, baseProd: 4400 },
-  { id: 'scientific_lab', icon: '🔬', name: { ua: 'Наукова лабораторія', en: 'Scientific Lab' }, desc: { ua: 'Дослідження', en: 'Research' }, baseCost: 7500, baseProd: 22000 },
-  { id: 'monument_masterpiece', icon: '🗿', name: { ua: 'Архітектурний шедевр', en: 'Architectural Masterpiece' }, desc: { ua: 'Вічний пам\'ятник', en: 'Eternal monument' }, baseCost: 75000, baseProd: 110000 },
+  { id: 'art_studio', icon: '🎨', name: { ua: 'Художня майстерня', en: 'Art Studio' }, desc: { ua: 'Творчість митців', en: 'Artists creativity' }, baseCost: 150000, baseProd: 5000 },
+  { id: 'printing_press', icon: '📖', name: { ua: 'Друкарський верстат', en: 'Printing Press' }, desc: { ua: 'Книгодрукування', en: 'Book printing' }, baseCost: 750000, baseProd: 20000 },
+  { id: 'renaissance_academy', icon: '🎓', name: { ua: 'Академія мистецтв', en: 'Renaissance Academy' }, desc: { ua: 'Освітній центр', en: 'Educational center' }, baseCost: 3750000, baseProd: 100000 },
+  { id: 'scientific_lab', icon: '🔬', name: { ua: 'Наукова лабораторія', en: 'Scientific Lab' }, desc: { ua: 'Дослідження', en: 'Research' }, baseCost: 18750000, baseProd: 500000 },
+  { id: 'monument_masterpiece', icon: '🗿', name: { ua: 'Архітектурний шедевр', en: 'Architectural Masterpiece' }, desc: { ua: 'Вічний пам\'ятник', en: 'Eternal monument' }, baseCost: 93750000, baseProd: 2500000 },
 ]);
 
 const enlightenmentGenerators = createGenerators([
-  { id: 'philosophy_salon', icon: '📚', name: { ua: 'Філософський салон', en: 'Philosophy Salon' }, desc: { ua: 'Ідеї Просвітництва', en: 'Enlightenment ideas' }, baseCost: 25, baseProd: 260 },
-  { id: 'royal_academy', icon: '🏛️', name: { ua: 'Королівська академія', en: 'Royal Academy' }, desc: { ua: 'Наука та мистецтва', en: 'Science and art' }, baseCost: 125, baseProd: 1040 },
-  { id: 'imperial_palace_europe', icon: '🏰', name: { ua: 'Імператорський палац', en: 'Imperial Palace Europe' }, desc: { ua: 'Монархія', en: 'Monarchy' }, baseCost: 750, baseProd: 5200 },
-  { id: 'industrial_revolution', icon: '🏭', name: { ua: 'Промислова революція', en: 'Industrial Revolution' }, desc: { ua: 'Фабрики та заводи', en: 'Factories' }, baseCost: 7500, baseProd: 26000 },
-  { id: 'world_empire', icon: '🌍', name: { ua: 'Світова імперія', en: 'World Empire' }, desc: { ua: 'Кolonії по всьому світу', en: 'World colonies' }, baseCost: 75000, baseProd: 130000 },
+  { id: 'philosophy_salon', icon: '📚', name: { ua: 'Філософський салон', en: 'Philosophy Salon' }, desc: { ua: 'Ідеї Просвітництва', en: 'Enlightenment ideas' }, baseCost: 180000, baseProd: 6000 },
+  { id: 'royal_academy', icon: '🏛️', name: { ua: 'Королівська академія', en: 'Royal Academy' }, desc: { ua: 'Наука та мистецтва', en: 'Science and art' }, baseCost: 900000, baseProd: 24000 },
+  { id: 'imperial_palace_europe', icon: '🏰', name: { ua: 'Імператорський палац', en: 'Imperial Palace Europe' }, desc: { ua: 'Монархія', en: 'Monarchy' }, baseCost: 4500000, baseProd: 120000 },
+  { id: 'industrial_revolution', icon: '🏭', name: { ua: 'Промислова революція', en: 'Industrial Revolution' }, desc: { ua: 'Фабрики та заводи', en: 'Factories' }, baseCost: 22500000, baseProd: 600000 },
+  { id: 'world_empire', icon: '🌍', name: { ua: 'Світова імперія', en: 'World Empire' }, desc: { ua: 'Кolonії по всьому світу', en: 'World colonies' }, baseCost: 112500000, baseProd: 3000000 },
 ]);
 
 const victorianGenerators = createGenerators([
-  { id: 'london_industry', icon: '🏭', name: { ua: 'Лондонська промисловість', en: 'London Industry' }, desc: { ua: 'Центр промисловості', en: 'Industrial center' }, baseCost: 30, baseProd: 320 },
-  { id: 'colonial_trade', icon: '⚓', name: { ua: 'Колоніальна торгівля', en: 'Colonial Trade' }, desc: { ua: 'Глобальна торгівля', en: 'Global trade' }, baseCost: 150, baseProd: 1280 },
-  { id: 'railway_empire', icon: '🚂', name: { ua: 'Залізнична імперія', en: 'Railway Empire' }, desc: { ua: 'Трансконтинентальні залізниці', en: 'Transcontinental railways' }, baseCost: 900, baseProd: 6400 },
-  { id: 'imperial_parliament', icon: '🏛️', name: { ua: 'Імперський парламент', en: 'Imperial Parliament' }, desc: { ua: 'Політична влада', en: 'Political power' }, baseCost: 9000, baseProd: 32000 },
-  { id: 'british_empire_network', icon: '🌐', name: { ua: 'Британська імперія', en: 'British Empire' }, desc: { ua: 'Найбільша імперія', en: 'Largest empire' }, baseCost: 90000, baseProd: 160000 },
+  { id: 'london_industry', icon: '🏭', name: { ua: 'Лондонська промисловість', en: 'London Industry' }, desc: { ua: 'Центр промисловості', en: 'Industrial center' }, baseCost: 240000, baseProd: 8000 },
+  { id: 'colonial_trade', icon: '⚓', name: { ua: 'Колоніальна торгівля', en: 'Colonial Trade' }, desc: { ua: 'Глобальна торгівля', en: 'Global trade' }, baseCost: 1200000, baseProd: 32000 },
+  { id: 'railway_empire', icon: '🚂', name: { ua: 'Залізнична імперія', en: 'Railway Empire' }, desc: { ua: 'Трансконтинентальні залізниці', en: 'Transcontinental railways' }, baseCost: 6000000, baseProd: 160000 },
+  { id: 'imperial_parliament', icon: '🏛️', name: { ua: 'Імперський парламент', en: 'Imperial Parliament' }, desc: { ua: 'Політична влада', en: 'Political power' }, baseCost: 30000000, baseProd: 800000 },
+  { id: 'british_empire_network', icon: '🌐', name: { ua: 'Британська імперія', en: 'British Empire' }, desc: { ua: 'Найбільша імперія', en: 'Largest empire' }, baseCost: 150000000, baseProd: 4000000 },
 ]);
 
 const modernGenerators = createGenerators([
-  { id: 'tech_startup', icon: '💻', name: { ua: 'Техно-стартап', en: 'Tech Startup' }, desc: { ua: 'Інновації Кремнієвої долини', en: 'Silicon Valley innovations' }, baseCost: 50, baseProd: 500 },
-  { id: 'global_corporation', icon: '🌍', name: { ua: 'Глобальна корпорація', en: 'Global Corporation' }, desc: { ua: 'Міжнародний бізнес', en: 'International business' }, baseCost: 250, baseProd: 2000 },
-  { id: 'research_university', icon: '🔬', name: { ua: 'Дослідницький університет', en: 'Research University' }, desc: { ua: 'Наука та освіта', en: 'Science and education' }, baseCost: 1500, baseProd: 10000 },
-  { id: 'space_agency', icon: '🚀', name: { ua: 'Космічна агенція', en: 'Space Agency' }, desc: { ua: 'Дослідження космосу', en: 'Space exploration' }, baseCost: 15000, baseProd: 50000 },
-  { id: 'digital_world', icon: '🌐', name: { ua: 'Цифровий світ', en: 'Digital World' }, desc: { ua: 'Глобальна мережа', en: 'Global network' }, baseCost: 150000, baseProd: 250000 },
+  { id: 'tech_startup', icon: '💻', name: { ua: 'Техно-стартап', en: 'Tech Startup' }, desc: { ua: 'Інновації Кремнієвої долини', en: 'Silicon Valley innovations' }, baseCost: 300000, baseProd: 10000 },
+  { id: 'global_corporation', icon: '🌍', name: { ua: 'Глобальна корпорація', en: 'Global Corporation' }, desc: { ua: 'Міжнародний бізнес', en: 'International business' }, baseCost: 1500000, baseProd: 40000 },
+  { id: 'research_university', icon: '🔬', name: { ua: 'Дослідницький університет', en: 'Research University' }, desc: { ua: 'Наука та освіта', en: 'Science and education' }, baseCost: 7500000, baseProd: 200000 },
+  { id: 'space_agency', icon: '🚀', name: { ua: 'Космічна агенція', en: 'Space Agency' }, desc: { ua: 'Дослідження космосу', en: 'Space exploration' }, baseCost: 37500000, baseProd: 1000000 },
+  { id: 'digital_world', icon: '🌐', name: { ua: 'Цифровий світ', en: 'Digital World' }, desc: { ua: 'Глобальна мережа', en: 'Global network' }, baseCost: 187500000, baseProd: 5000000 },
 ]);
 
 // ═══════════════════════════════════════════════════════════════════════════
