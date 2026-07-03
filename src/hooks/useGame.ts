@@ -25,7 +25,8 @@ import {
   getUserRank,
   fetchActiveBoosters,
 } from '../lib/storage';
-import { rpcClaimOfflineIncome, rpcBuyGenerator, rpcRecordTaps, rpcValidatePassiveXp } from '../lib/rpc';
+import { rpcClaimOfflineIncome, rpcBuyGenerator, rpcUpgradeTap, rpcValidatePassiveXp } from '../lib/rpc';
+import { hapticNotification, hapticImpact } from '../lib/telegram';
 import type { ActiveBoosters } from '../types/game';
 
 const LOCAL_SAVE_INTERVAL = 2000;

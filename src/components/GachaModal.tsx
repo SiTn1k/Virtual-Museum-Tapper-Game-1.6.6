@@ -36,6 +36,46 @@ function getGachaCost(epochId: EpochId): number {
   return 100 * Math.max(1, idx + 1);
 }
 
+/**
+ * Get epoch-based rare bonus percentage (Phase 9)
+ * Later epochs get slightly better rare drop rates
+ */
+function getEpochRareBonus(epochIndex: number): number {
+  if (epochIndex >= 16) return 2.0;      // Epochs 17-20: +2%
+  if (epochIndex >= 12) return 1.5;      // Epochs 13-16: +1.5%
+  if (epochIndex >= 8) return 1.0;       // Epochs 9-12: +1%
+  if (epochIndex >= 4) return 0.5;       // Epochs 5-8: +0.5%
+  return 0;                              // Epochs 1-4: Base rates
+}
+
+/**
+ * Get drop rates for display based on epoch and prestige
+ */
+function getDropRates(epochId: EpochId, prestigeLevel: number): { rarity: string; chance: number }[] {
+  const epochIndex = EPOCHS.findIndex(e => e.id === epochId);
+  const epochBonus = getEpochRareBonus(epochIndex);
+  
+  // Base rates
+  const common = 60 - epochBonus;
+  const rare = 25 + epochBonus;
+  const epic = 10;
+  const legendary = 4;
+  const secret = prestigeLevel >= 1 ? 1 : 0;
+  
+  const rates = [
+    { rarity: 'Звичайний', chance: common },
+    { rarity: 'Рідкісний', chance: rare },
+    { rarity: 'Епічний', chance: epic },
+    { rarity: 'Легендарний', chance: legendary },
+  ];
+  
+  if (secret > 0) {
+    rates.push({ rarity: 'Секретний', chance: secret });
+  }
+  
+  return rates;
+}
+
 const ROLL_STEPS = 18;
 const ROLL_INTERVAL_MS = 60;
 
@@ -422,7 +462,16 @@ export function GachaModal({
                 </p>
               )}
               <div className="mt-3 text-center text-xs text-gray-500">
-                Шанси: Звичайний 60% | Рідкісний 25% | Епічний 10% | Легендарний 4%{prestigeLevel >= 1 ? ' | Секретний 1%' : ''}
+                {/* Phase 9: Show dynamic drop rates based on epoch */}
+                Шанси: {(() => {
+                  const rates = getDropRates(epoch.id, prestigeLevel);
+                  return rates.map(r => `${r.rarity} ${r.chance}%`).join(' | ');
+                })()}
+                {getEpochRareBonus(EPOCHS.findIndex(e => e.id === epoch.id)) > 0 && (
+                  <span className="block mt-1 text-green-400/70">
+                    Бонус епохи: +{getEpochRareBonus(EPOCHS.findIndex(e => e.id === epoch.id))}% рідкісних
+                  </span>
+                )}
               </div>
             </>
           )}

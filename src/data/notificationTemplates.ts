@@ -412,7 +412,7 @@ const ACHIEVEMENT_NOTIFICATIONS: NotificationTemplate[] = [
     conditions: {},
     scheduling: {
       type: 'triggered',
-      triggerEvent: 'secret_achievement_earned',
+      triggerEvent: 'achievement_earned',
     },
     isEnabled: true,
   },
@@ -693,7 +693,7 @@ const COMEBACK_NOTIFICATIONS: NotificationTemplate[] = [
       en: 'Come back',
     },
     conditions: {
-      daysSinceLastSession: 3,
+      hoursSinceLastSession: 72,
     },
     scheduling: {
       type: 'immediate',
@@ -719,7 +719,7 @@ const COMEBACK_NOTIFICATIONS: NotificationTemplate[] = [
       en: 'Claim gift',
     },
     conditions: {
-      daysSinceLastSession: 7,
+      hoursSinceLastSession: 168,
     },
     scheduling: {
       type: 'immediate',
@@ -781,7 +781,7 @@ const MISSION_NOTIFICATIONS: NotificationTemplate[] = [
     conditions: {},
     scheduling: {
       type: 'triggered',
-      triggerEvent: 'all_missions_complete',
+      triggerEvent: 'mission_completed',
     },
     isEnabled: true,
   },

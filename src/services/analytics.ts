@@ -3,6 +3,7 @@
  * Production-ready analytics tracking for LiveOps optimization
  */
 
+import { supabase } from './supabase';
 import type {
   AnalyticsEvent,
   AnalyticsEventType,
@@ -13,7 +14,7 @@ import type {
 // ANALYTICS CONFIGURATION
 // ============================================================================
 
-// const ANALYTICS_ENDPOINT = '/api/analytics'; // Reserved for future backend
+const ANALYTICS_FUNCTION_URL = 'track-analytics';
 const BATCH_SIZE = 10;
 const FLUSH_INTERVAL = 5000; // 5 seconds
 
@@ -22,6 +23,9 @@ let eventQueue: AnalyticsEvent[] = [];
 let flushTimer: number | null = null;
 let sessionId: string = '';
 let telegramId: number = 0;
+
+// Remote logging endpoint (optional)
+const USE_REMOTE_LOGGING = !import.meta.env.DEV;
 
 // ============================================================================
 // SESSION MANAGEMENT
@@ -114,7 +118,7 @@ export function trackEvent(
 }
 
 /**
- * Flush events to server
+ * Flush events to server (Phase 12: Enhanced to use edge function)
  */
 export async function flushEvents(): Promise<void> {
   if (eventQueue.length === 0) return;
@@ -123,8 +127,7 @@ export async function flushEvents(): Promise<void> {
   eventQueue = [];
   
   try {
-    // In production, this would send to your analytics backend
-    // For now, we log to console and localStorage
+    // Always store locally for debugging/backup
     const storageKey = `analytics_${telegramId}`;
     const existing = localStorage.getItem(storageKey);
     const existingEvents = existing ? JSON.parse(existing) : [];
@@ -134,12 +137,23 @@ export async function flushEvents(): Promise<void> {
       console.log('[Analytics] Flushed', eventsToSend.length, 'events');
     }
     
-    // TODO: Send to actual analytics endpoint when backend is ready
-    // await fetch(ANALYTICS_ENDPOINT, {
-    //   method: 'POST',
-    //   headers: { 'Content-Type': 'application/json' },
-    //   body: JSON.stringify({ events: eventsToSend }),
-    // });
+    // Send to edge function (Phase 12 enhancement)
+    if (USE_REMOTE_LOGGING && supabase) {
+      const { data, error } = await supabase.functions.invoke(ANALYTICS_FUNCTION_URL, {
+        body: { 
+          events: eventsToSend,
+          telegram_id: telegramId,
+        },
+      });
+      
+      if (error) {
+        console.error('[Analytics] Edge function error:', error);
+        // Re-queue events on failure
+        eventQueue = [...eventsToSend, ...eventQueue];
+      } else if (import.meta.env.DEV) {
+        console.log('[Analytics] Remote flush successful:', data);
+      }
+    }
   } catch (error) {
     // Re-queue events on failure
     eventQueue = [...eventsToSend, ...eventQueue];

@@ -412,6 +412,7 @@ function App() {
         passiveXp={state.passiveXpPerSecond}
         currency={state.currency}
         currencyIcon={epoch.currencyIcon}
+        prestigeLevel={state.prestigeLevel || 0}
         energyMultiplier={energyMultiplier}
         topOffset={0}
       />
@@ -743,7 +744,7 @@ function App() {
               {/* Free AdsGram XP Boost */}
               <div className="mb-4">
                 <AdsGramButton
-                  activeBoosters={state.activeBoosters || {}}
+                  activeBoosters={(state.activeBoosters || {}) as Record<string, unknown>}
                   onBoostActivated={refreshBoosters}
                 />
               </div>

@@ -55,10 +55,6 @@ export async function rpcSwitchEpoch(epochId: string): Promise<RpcResult> {
   return callGameAction({ action: 'switch_epoch', epoch_id: epochId });
 }
 
-export async function rpcBuyGenerator(generatorId: string): Promise<RpcResult> {
-  return callGameAction({ action: 'buy_generator', generator_id: generatorId });
-}
-
 /**
  * Open chest server-side. Returns artifact rewards determined by server RNG.
  * The server updates artifact_parts/artifact_levels/completed_artifacts in DB.

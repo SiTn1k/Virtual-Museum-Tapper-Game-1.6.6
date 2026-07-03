@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+# Pre-commit hook - runs lint-staged on staged files
+
+# Check if lint-staged is installed
+if [ ! -f "$(npm root)/lint-staged" ]; then
+  echo "lint-staged not found. Skipping pre-commit checks."
+  exit 0
+fi
+
+# Run lint-staged
+npx lint-staged

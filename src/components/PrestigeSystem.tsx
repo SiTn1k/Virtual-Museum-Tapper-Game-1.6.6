@@ -8,7 +8,7 @@ interface PrestigeButtonProps {
   prestigeLevel: number;
   prestigePoints: number;
   canPrestige: boolean;
-  onPrestige: () => boolean;
+  onPrestige: () => Promise<boolean>;
 }
 
 export function PrestigeButton({
@@ -28,8 +28,8 @@ export function PrestigeButton({
     setShowConfirm(true);
   };
 
-  const confirmPrestige = () => {
-    const success = onPrestige();
+  const confirmPrestige = async () => {
+    const success = await onPrestige();
     if (success) {
       setShowConfirm(false);
     }

@@ -92,12 +92,14 @@ export interface SeasonReward {
     amount?: number;
     rarity?: 'common' | 'rare' | 'epic' | 'legendary';
     duration?: number; // For boosters, in milliseconds
+    cosmeticId?: string; // For cosmetic rewards
   };
   premiumReward?: {
     type: 'currency' | 'xp' | 'booster' | 'artifact_fragment' | 'cosmetic' | 'gacha_ticket';
     amount?: number;
     rarity?: 'common' | 'rare' | 'epic' | 'legendary';
     duration?: number;
+    cosmeticId?: string; // For cosmetic rewards
   };
 }
 
@@ -108,7 +110,7 @@ export interface SeasonChallenge {
   type: 'tap' | 'earn_xp' | 'buy_generator' | 'open_gacha' | 'upgrade_tap' | 'epoch_complete' | 'prestige' | 'watch_ad' | 'claim_reward';
   target: number;
   reward: {
-    type: 'season_xp' | 'currency' | 'artifact_fragment';
+    type: 'season_xp' | 'currency' | 'artifact_fragment' | 'gacha_ticket';
     amount: number;
     rarity?: 'common' | 'rare' | 'epic' | 'legendary';
   };
@@ -282,11 +284,14 @@ export type AnalyticsEventType =
   | 'mission_completed' | 'achievement_earned' | 'season_tier_reached'
   // Social events
   | 'referral_sent' | 'referral_completed' | 'leaderboard_viewed'
+  | 'leaderboard_rank_up' | 'leaderboard_top_10'
   | 'share_clicked'
   // LiveOps events
   | 'event_started' | 'event_completed' | 'event_reward_claimed'
   | 'season_started' | 'season_purchased' | 'season_challenge_completed'
   | 'comeback_reward_claimed' | 'notification_clicked'
+  // Energy events
+  | 'energy_full' | 'energy_low'
   // Commerce events
   | 'iap_started' | 'iap_completed' | 'purchase_failed'
   // Error/Funnel events

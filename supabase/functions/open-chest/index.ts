@@ -17,12 +17,19 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
  * Server-authoritative chest/skychest opening.
  * Generates artifact fragment rewards with proper rarity chances.
  *
- * Rarity chances:
+ * BASE Rarity chances:
  * - Common: 60%
  * - Rare: 25%
  * - Epic: 10%
  * - Legendary: 4%
  * - Secret: 1% (only if prestige_level >= requiredPrestige)
+ *
+ * EPOCH-BASED RARE BONUS (Phase 9):
+ * - Epochs 1-4 (indices 0-3): Base rates
+ * - Epochs 5-8 (indices 4-7): +0.5% rare chance
+ * - Epochs 9-12 (indices 8-11): +1% rare chance
+ * - Epochs 13-16 (indices 12-15): +1.5% rare chance
+ * - Epochs 17-20 (indices 16-19): +2% rare chance
  *
  * Secret artifact chance scales with prestige research:
  * - Base: 1%
@@ -30,6 +37,18 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
  *
  * Rewards: 1-3 artifact fragments for a random artifact from current epoch
  */
+
+/**
+ * Get epoch-based rare bonus percentage
+ * Later epochs get slightly better rare drop rates
+ */
+function getEpochRareBonus(epochIndex: number): number {
+  if (epochIndex >= 16) return 2.0;      // Epochs 17-20: +2%
+  if (epochIndex >= 12) return 1.5;      // Epochs 13-16: +1.5%
+  if (epochIndex >= 8) return 1.0;       // Epochs 9-12: +1%
+  if (epochIndex >= 4) return 0.5;       // Epochs 5-8: +0.5%
+  return 0;                              // Epochs 1-4: Base rates
+}
 
 interface OpenChestRequest {
   telegram_id: number;
@@ -176,32 +195,44 @@ function jsonResponse(data: OpenChestResponse | { error: string }, status = 200)
 /**
  * Roll for rarity based on chances
  * Returns: common | rare | epic | legendary | secret
+ * 
+ * @param prestigeLevel - Player's prestige level (0+)
+ * @param rareArtifactChanceBonus - Bonus from prestige research
+ * @param epochIndex - 0-based index of the epoch for epoch-based bonuses
  */
-function rollRarity(prestigeLevel: number, rareArtifactChanceBonus: number): string {
+function rollRarity(prestigeLevel: number, rareArtifactChanceBonus: number, epochIndex: number = 0): string {
   const roll = Math.random() * 100;
 
-  // Secret chance: base 1% + bonus from research
+  // Get epoch-based rare bonus (Phase 9)
+  const epochRareBonus = getEpochRareBonus(epochIndex);
+  
+  // Total rare bonus = research bonus + epoch bonus
+  const totalRareBonus = rareArtifactChanceBonus + epochRareBonus;
+
+  // Secret chance: base 1% + bonus from research (NO epoch bonus for secret)
   const secretChance = 1 + rareArtifactChanceBonus;
   if (prestigeLevel >= 1 && roll < secretChance) {
     return "secret";
   }
 
-  // Legendary: 4%
+  // Legendary: 4% (unchanged)
   if (roll < secretChance + 4) {
     return "legendary";
   }
 
-  // Epic: 10%
+  // Epic: 10% (unchanged)
   if (roll < secretChance + 4 + 10) {
     return "epic";
   }
 
-  // Rare: 25%
-  if (roll < secretChance + 4 + 10 + 25) {
+  // Rare: 25% + epoch bonus
+  // The epoch bonus shifts some probability from Common to Rare
+  // This is done by increasing the rare threshold
+  if (roll < secretChance + 4 + 10 + 25 + totalRareBonus) {
     return "rare";
   }
 
-  // Common: remaining ~60%
+  // Common: remaining ~60% - epoch bonus
   return "common";
 }
 
@@ -226,12 +257,19 @@ function getRandomArtifact(epochId: string, rarity: string, prestigeLevel: numbe
 
 /**
  * Generate rewards for chest opening
+ * 
+ * @param epochId - The epoch ID for artifact selection
+ * @param prestigeLevel - Player's prestige level
+ * @param rareArtifactChanceBonus - Bonus from prestige research
+ * @param chestType - Type of chest being opened
+ * @param epochIndex - 0-based index of the epoch for epoch-based bonuses (Phase 9)
  */
 function generateRewards(
   epochId: string,
   prestigeLevel: number,
   rareArtifactChanceBonus: number,
-  chestType: "skychest" | "daily"
+  chestType: "skychest" | "daily",
+  epochIndex: number = 0
 ): ArtifactDrop[] {
   const rewards: ArtifactDrop[] = [];
 
@@ -239,7 +277,8 @@ function generateRewards(
   const numArtifacts = chestType === "skychest" ? Math.floor(Math.random() * 2) + 2 : 1;
 
   for (let i = 0; i < numArtifacts; i++) {
-    const rarity = rollRarity(prestigeLevel, rareArtifactChanceBonus);
+    // Pass epochIndex to rollRarity for epoch-based bonuses (Phase 9)
+    const rarity = rollRarity(prestigeLevel, rareArtifactChanceBonus, epochIndex);
     const artifact = getRandomArtifact(epochId, rarity, prestigeLevel);
 
     if (artifact) {
@@ -341,8 +380,8 @@ Deno.serve(async (req: Request) => {
     // Apply +5% rare chance if chest bonus active
     const finalRareBonus = hasChestBonus ? rareArtifactChanceBonus + 5 : rareArtifactChanceBonus;
 
-    // Generate rewards
-    const rewards = generateRewards(epoch_id, prestigeLevel, finalRareBonus, chest_type);
+    // Generate rewards with epoch index for epoch-based bonuses (Phase 9)
+    const rewards = generateRewards(epoch_id, prestigeLevel, finalRareBonus, chest_type, epoch_index ?? 0);
 
     // Update player's artifact parts
     const artifactParts = (player.artifact_parts as Record<string, number>) || {};

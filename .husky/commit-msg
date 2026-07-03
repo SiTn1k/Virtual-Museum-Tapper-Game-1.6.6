@@ -1,0 +1,49 @@
+#!/usr/bin/env sh
+# Commit-msg hook - validates commit message format
+
+# Get the commit message file
+commit_msg_file="$1"
+
+# Read commit message
+commit_msg=$(cat "$commit_msg_file")
+
+# Validate commit message format
+# Accepts:
+# - feat: message
+# - fix: message
+# - docs: message
+# - style: message
+# - refactor: message
+# - test: message
+# - chore: message
+# - perf: message
+# - ci: message
+# - revert: message
+
+# Pattern: type(scope): subject OR type: subject
+pattern="^(feat|fix|docs|style|refactor|test|chore|perf|ci|revert)(\(.+\))?: .+"
+
+if ! echo "$commit_msg" | grep -qE "$pattern"; then
+  echo ""
+  echo "❌ Invalid commit message format!"
+  echo ""
+  echo "Valid formats:"
+  echo "  feat: add new feature"
+  echo "  feat(auth): add login functionality"
+  echo "  fix: fix bug"
+  echo "  fix(ui): fix button click issue"
+  echo "  docs: update documentation"
+  echo "  style: format code"
+  echo "  refactor: restructure code"
+  echo "  test: add tests"
+  echo "  chore: update dependencies"
+  echo "  perf: improve performance"
+  echo "  ci: update CI/CD"
+  echo "  revert: revert changes"
+  echo ""
+  echo "More info: https://www.conventionalcommits.org/"
+  exit 1
+fi
+
+echo "✅ Commit message format is valid"
+exit 0
