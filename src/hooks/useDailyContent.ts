@@ -34,7 +34,6 @@ export interface UseDailyContentReturn {
   // Daily check-in
   checkInStreak: number;
   shouldShowCheckIn: boolean;
-  claimDailyReward: () => { currency: number; xp: number; newStreak: number };
   
   // Streak management
   dailyStreak: number;
@@ -140,40 +139,8 @@ export function useDailyContent(): UseDailyContentReturn {
   }, []);
 
   /**
-   * Claim daily check-in reward
+   * Claim daily check-in reward - note: implemented in useGame.ts, not used here
    */
-  const claimDailyReward = useCallback((): { currency: number; xp: number; newStreak: number } => {
-    const today = getTodayDateStr();
-    const yesterday = getYesterdayDateStr();
-
-    let result = { currency: 0, xp: 0, newStreak: 0 };
-
-    setDailyTasksState(prev => {
-      let newStreak: number;
-      let newBestStreak = bestStreak;
-
-      // Calculate new check-in streak
-      if (!lastCheckIn) {
-        newStreak = 1;
-      } else if (lastCheckIn === yesterday) {
-        newStreak = checkInStreak + 1;
-      } else {
-        newStreak = 1; // Missed a day — reset
-      }
-
-      const dayInWeek = ((newStreak - 1) % 7) + 1;
-      const reward = getDailyReward(dayInWeek);
-      const bonusCurrency = reward.currency + (dayInWeek === 7 ? 100 : 0); // Day 7 bonus
-
-      result = { currency: bonusCurrency, xp: reward.xp, newStreak };
-
-      setCheckInStreak(newStreak);
-
-      return prev; // Return unchanged, caller handles state update
-    });
-
-    return result;
-  }, [lastCheckIn, checkInStreak, bestStreak, getDailyReward]);
 
   /**
    * Update check-in streak
@@ -276,7 +243,6 @@ export function useDailyContent(): UseDailyContentReturn {
     // Daily check-in
     checkInStreak,
     shouldShowCheckIn,
-    claimDailyReward,
     
     // Streak management
     dailyStreak,
