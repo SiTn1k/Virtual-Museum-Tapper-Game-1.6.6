@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { createHmac } from "node:crypto";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -11,6 +12,54 @@ const BOT_TOKEN = Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const TG_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+const MAX_INIT_DATA_AGE_SECONDS = 86400;
+
+// HMAC validation helper
+function parseUrlEncodedForm(formString: string): Map<string, string> {
+  const params = new URLSearchParams(formString);
+  const map = new Map<string, string>();
+  for (const [key, value] of params) {
+    map.set(key, value);
+  }
+  return map;
+}
+
+function extractUserId(initData: string): number | null {
+  const params = parseUrlEncodedForm(initData);
+  const userStr = params.get("user");
+  if (!userStr) return null;
+  try {
+    const user = JSON.parse(userStr);
+    return typeof user.id === "number" ? user.id : null;
+  } catch {
+    return null;
+  }
+}
+
+function validateRequest(initData: string): { valid: boolean; userId: number | null; error?: string } {
+  if (!BOT_TOKEN) return { valid: false, userId: null, error: "BOT_TOKEN not configured" };
+
+  const params = parseUrlEncodedForm(initData);
+  const hash = params.get("hash");
+  if (!hash) return { valid: false, userId: null, error: "Missing hash" };
+
+  const authDateStr = params.get("auth_date");
+  if (!authDateStr) return { valid: false, userId: null, error: "Missing auth_date" };
+  const authDate = parseInt(authDateStr, 10);
+  const age = Math.floor(Date.now() / 1000) - authDate;
+  if (isNaN(authDate) || age > MAX_INIT_DATA_AGE_SECONDS || age < 0) {
+    return { valid: false, userId: null, error: "Stale initData" };
+  }
+
+  const keys = [...params.keys()].filter(k => k !== "hash").sort();
+  const checkStr = keys.map(k => `${k}=${params.get(k)}`).join("\n");
+  const secretKey = createHmac("sha256", "WebAppData").update(BOT_TOKEN).digest();
+  const computed = createHmac("sha256", secretKey).update(checkStr).digest("hex");
+
+  if (computed !== hash) return { valid: false, userId: null, error: "HMAC mismatch" };
+
+  return { valid: true, userId: extractUserId(initData) };
+}
 
 interface BoosterDef {
   title: string;
@@ -262,11 +311,28 @@ Deno.serve(async (req: Request) => {
     }
 
     // ─── Mini App API ─────────────────────────────────────────────────────────
-    const { action, booster_id, telegram_id } = body as {
+    const { action, booster_id, telegram_id, init_data } = body as {
       action: string;
       booster_id?: string;
       telegram_id?: number;
+      init_data?: string;
     };
+
+    // Validate HMAC for Mini App API calls (except set_webhook which is admin)
+    if (action !== "set_webhook" && action !== "payment_callback") {
+      if (!init_data) {
+        return json({ error: "Missing init_data for authentication" }, 400);
+      }
+      const validation = validateRequest(init_data);
+      if (!validation.valid) {
+        console.warn(`HMAC validation failed for telegram-payments ${action}: ${validation.error}`);
+        return json({ error: validation.error }, 401);
+      }
+      if (telegram_id && validation.userId !== telegram_id) {
+        console.warn(`User ID mismatch in telegram-payments ${action}`);
+        return json({ error: "User ID mismatch" }, 403);
+      }
+    }
 
     // Create invoice link (Stars payment)
     if (action === "create_invoice") {

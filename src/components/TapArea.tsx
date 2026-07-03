@@ -196,7 +196,7 @@ function LevelUpCelebration({ level, show }: { level: number; show: boolean }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// MAIN TAP AREA COMPONENT
+// MAIN TAP AREA COMPONENT - Compact Design for Better UX
 // ═══════════════════════════════════════════════════════════════════════════
 export function TapArea({
   epoch,
@@ -296,69 +296,76 @@ export function TapArea({
   const effectiveTapPower = prestigeLevel > 0 ? tapPower * (1 + prestigeLevel * 0.1) : tapPower;
 
   return (
-    <div className="relative flex-shrink-0 flex flex-col" style={{ height: `calc(50vh - ${topOffset}px)` }}>
-      {/* Header Stats */}
+    <div 
+      className="relative flex-shrink-0 flex flex-col w-full"
+      style={{ height: `calc(40vh - ${topOffset}px)`, maxHeight: '280px' }}
+    >
+      {/* Compact Header Stats - Single row layout */}
       <div
-        className="p-3 sm:p-4 text-white relative overflow-hidden"
+        className="p-2 text-white relative overflow-hidden flex items-center justify-between"
         style={{ background: epoch.bgGradient }}
       >
-        {/* Animated background pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div
-            className="absolute inset-0"
-            style={{
-              backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
-              backgroundSize: '40px 40px',
-            }}
-          />
-        </div>
-
-        <div className="relative flex justify-between items-center mb-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-xl sm:text-2xl">{epoch.currencyIcon}</span>
-              <h2 className="text-sm sm:text-lg font-bold">{epoch.name.ua}</h2>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] sm:text-xs opacity-80">Рівень {level}</span>
+        {/* Left: Epoch & Level */}
+        <div className="flex items-center gap-2">
+          <span className="text-2xl">{epoch.currencyIcon}</span>
+          <div className="flex flex-col">
+            <span className="text-xs font-bold leading-tight">{epoch.name.ua}</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] opacity-80">Рів {level}</span>
               {prestigeLevel > 0 && (
-                <span className="text-[10px] sm:text-xs bg-yellow-500/50 px-1.5 py-0.5 rounded-full font-medium">
-                  ★ {prestigeLevel}
+                <span className="text-[10px] bg-yellow-500/50 px-1.5 py-0.5 rounded-full font-medium">
+                  ★{prestigeLevel}
                 </span>
               )}
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-xl sm:text-2xl font-bold flex items-center gap-1">
-              <span>{currencyIcon}</span>
-              <span>{formatNumber(currency)}</span>
-            </div>
-            <div className="text-[10px] sm:text-xs opacity-80 flex items-center justify-end gap-1">
-              <Zap className="w-3 h-3" />
-              <span>+{formatNumber(passiveXp)}/с XP</span>
-            </div>
+        </div>
+
+        {/* Center: XP Progress (compact) */}
+        <div className="flex-1 max-w-[120px] mx-3">
+          <div className="xp-bar" style={{ height: '10px' }}>
+            <div
+              className="xp-bar-fill"
+              style={{ width: `${Math.min(xpPercent, 100)}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-[9px] mt-0.5 opacity-80">
+            <span>{formatNumber(xp)}</span>
+            <span>{formatNumber(xpToNextLevel)}</span>
           </div>
         </div>
 
-        {/* XP Progress Bar - Fixed shine animation */}
-        <div className="xp-bar">
-          <div
-            className="xp-bar-fill"
-            style={{ width: `${Math.min(xpPercent, 100)}%` }}
-          />
+        {/* Right: Currency & Passive */}
+        <div className="flex flex-col items-end gap-1">
+          <div className="text-sm font-bold flex items-center gap-1">
+            <span>{currencyIcon}</span>
+            <span>{formatNumber(currency)}</span>
+          </div>
+          <div className="text-[10px] opacity-80 flex items-center gap-1">
+            <Zap className="w-3 h-3" />
+            <span>+{formatNumber(passiveXp)}/с</span>
+          </div>
         </div>
-        <div className="flex justify-between text-[10px] sm:text-xs mt-1 opacity-90">
-          <span className="font-medium">{formatNumber(xp)} XP</span>
-          <span className="opacity-70">{formatNumber(xpToNextLevel)} XP</span>
-        </div>
+
+        {/* Energy multiplier badge */}
+        {prestigeLevel > 0 && (
+          <div className={`ml-2 px-2 py-1 rounded-full text-[10px] font-bold ${
+            energyMultiplier >= 4 ? 'bg-green-500/30 text-green-400' :
+            energyMultiplier >= 2 ? 'bg-yellow-500/30 text-yellow-400' :
+            'bg-white/10 text-gray-300'
+          }`}>
+            {energyMultiplier.toFixed(1)}x
+          </div>
+        )}
       </div>
 
-      {/* Tap Area */}
+      {/* Tap Area - Compact with centered tap target */}
       <div
         ref={areaRef}
         className="flex-1 relative overflow-hidden cursor-pointer select-none touch-manipulation"
         style={{
-          background: `linear-gradient(135deg, ${epoch.color}22 0%, ${epoch.color}44 100%)`,
+          background: `linear-gradient(135deg, ${epoch.color}15 0%, ${epoch.color}30 100%)`,
+          minHeight: '120px',
         }}
         onClick={handleTap}
         onTouchStart={handleTap}
@@ -367,11 +374,11 @@ export function TapArea({
         <LevelUpCelebration level={level} show={showLevelUp} />
 
         {/* Animated background particles - using pre-computed positions */}
-        <div className="absolute inset-0 overflow-hidden opacity-20">
+        <div className="absolute inset-0 overflow-hidden opacity-10">
           {BACKGROUND_PARTICLES.map((particle, i) => (
             <div
               key={i}
-              className="absolute w-1.5 h-1.5 bg-white rounded-full animate-float-slow"
+              className="absolute w-1 h-1 bg-white rounded-full animate-float-slow"
               style={{
                 left: `${particle.left}%`,
                 top: `${particle.top}%`,
@@ -382,34 +389,30 @@ export function TapArea({
           ))}
         </div>
 
-        {/* Central Icon with enhanced glow */}
+        {/* Central Tap Target - Smaller, more elegant */}
         <div className="absolute inset-0 flex items-center justify-center">
           <div className="relative">
-            {/* Enhanced glow effect */}
+            {/* Subtle glow effect */}
             <div
-              className="absolute inset-0 blur-3xl animate-pulse"
-              style={{ backgroundColor: epoch.color, opacity: 0.5 }}
-            />
-            <div
-              className="absolute inset-0 blur-xl"
+              className="absolute inset-0 blur-2xl animate-pulse"
               style={{ backgroundColor: epoch.color, opacity: 0.3 }}
             />
-            {/* Main icon */}
+            {/* Main icon - smaller */}
             <div
-              className="text-6xl sm:text-8xl transform transition-transform duration-150 active:scale-95 relative z-10"
-              style={{ filter: `drop-shadow(0 0 30px ${epoch.color})` }}
+              className="text-5xl sm:text-6xl transform transition-transform duration-150 active:scale-90 relative z-10"
+              style={{ filter: `drop-shadow(0 0 20px ${epoch.color})` }}
             >
               {epoch.currencyIcon}
             </div>
           </div>
         </div>
 
-        {/* Tap Power Indicator - Enhanced styling */}
-        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/70 px-5 sm:px-6 py-2.5 sm:py-3 rounded-full text-white backdrop-blur-md shadow-lg border border-white/20">
-          <div className="flex items-center gap-2">
-            <Zap className="w-5 h-5 sm:w-5 sm:h-5 text-yellow-400 animate-pulse" />
-            <span className="text-base sm:text-lg font-bold">
-              +{formatNumber(Math.round(effectiveTapPower))} XP
+        {/* Tap Power Indicator - Small floating badge */}
+        <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/60 px-3 py-1 rounded-full text-white backdrop-blur-sm shadow-lg border border-white/10">
+          <div className="flex items-center gap-1.5">
+            <Zap className="w-4 h-4 text-yellow-400" />
+            <span className="text-sm font-bold">
+              +{formatNumber(Math.round(effectiveTapPower))}
             </span>
           </div>
         </div>
@@ -437,22 +440,6 @@ export function TapArea({
             onComplete={() => removeParticle(particle.id)}
           />
         ))}
-
-        {/* Prestige indicator - Phase 6: Dynamic energy multiplier */}
-        {prestigeLevel > 0 && (
-          <div className={`absolute top-4 right-4 px-3 py-1.5 rounded-full shadow-lg ${
-            energyMultiplier >= 4 ? 'bg-gradient-to-r from-green-500 to-emerald-500 animate-pulse-slow' :
-            energyMultiplier >= 2 ? 'bg-gradient-to-r from-yellow-500 to-amber-500' :
-            'bg-white/20'
-          }`}>
-            <div className={`flex items-center gap-1 font-bold text-sm ${
-              energyMultiplier >= 2 ? 'text-black' : 'text-white/80'
-            }`}>
-              <Sparkles className="w-4 h-4" />
-              <span>Енергія {energyMultiplier.toFixed(1)}x</span>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

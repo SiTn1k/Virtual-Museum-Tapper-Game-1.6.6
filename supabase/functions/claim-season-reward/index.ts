@@ -2,17 +2,81 @@
 // Handles season/battle pass reward claims with server-side validation
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createHmac } from 'node:crypto';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+const BOT_TOKEN = Deno.env.get('TELEGRAM_BOT_TOKEN') ?? '';
+const MAX_INIT_DATA_AGE_SECONDS = 86400;
+
 interface ClaimRequest {
   telegram_id: number;
   season_id: string;
   tier: number;
   is_premium: boolean;
+  init_data: string;
+}
+
+function parseUrlEncodedForm(formString: string): Map<string, string> {
+  const params = new URLSearchParams(formString);
+  const map = new Map<string, string>();
+  for (const [key, value] of params) {
+    map.set(key, value);
+  }
+  return map;
+}
+
+function extractUserId(initData: string): number | null {
+  const params = parseUrlEncodedForm(initData);
+  const userStr = params.get('user');
+  if (!userStr) return null;
+  try {
+    const user = JSON.parse(userStr);
+    return typeof user.id === 'number' ? user.id : null;
+  } catch {
+    return null;
+  }
+}
+
+function validateRequest(initData: string): { valid: boolean; userId: number | null; error?: string } {
+  if (!BOT_TOKEN) {
+    return { valid: false, userId: null, error: 'TELEGRAM_BOT_TOKEN not configured' };
+  }
+
+  const params = parseUrlEncodedForm(initData);
+  const hash = params.get('hash');
+  if (!hash) {
+    return { valid: false, userId: null, error: 'Missing hash in initData' };
+  }
+
+  const authDateStr = params.get('auth_date');
+  if (!authDateStr) {
+    return { valid: false, userId: null, error: 'Missing auth_date' };
+  }
+
+  const authDate = parseInt(authDateStr, 10);
+  const ageSeconds = Math.floor(Date.now() / 1000) - authDate;
+  if (ageSeconds > MAX_INIT_DATA_AGE_SECONDS) {
+    return { valid: false, userId: null, error: 'initData too old' };
+  }
+  if (ageSeconds < 0) {
+    return { valid: false, userId: null, error: 'auth_date is in the future' };
+  }
+
+  const keys = [...params.keys()].filter(k => k !== 'hash').sort();
+  const dataCheckString = keys.map(k => `${k}=${params.get(k)}`).join('\n');
+
+  const secretKey = createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
+  const computedHash = createHmac('sha256', secretKey).update(dataCheckString).digest('hex');
+
+  if (computedHash !== hash) {
+    return { valid: false, userId: null, error: 'HMAC mismatch' };
+  }
+
+  return { valid: true, userId: extractUserId(initData) };
 }
 
 Deno.serve(async (req) => {
@@ -26,7 +90,33 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
     
-    const { telegram_id, season_id, tier, is_premium }: ClaimRequest = await req.json();
+    const body: ClaimRequest = await req.json();
+    const { telegram_id, season_id, tier, is_premium, init_data } = body;
+    
+    // Validate HMAC authentication
+    if (!init_data) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Missing init_data' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const validation = validateRequest(init_data);
+    if (!validation.valid) {
+      console.warn(`HMAC validation failed for claim-season-reward: ${validation.error}`);
+      return new Response(
+        JSON.stringify({ success: false, error: validation.error }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (validation.userId !== telegram_id) {
+      console.warn(`User ID mismatch in claim-season-reward: expected ${validation.userId}, got ${telegram_id}`);
+      return new Response(
+        JSON.stringify({ success: false, error: 'User ID mismatch' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     if (!telegram_id || !season_id || tier === undefined) {
       return new Response(

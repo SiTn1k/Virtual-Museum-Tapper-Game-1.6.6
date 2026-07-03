@@ -17,6 +17,7 @@ import { Crown, ShoppingBag, Trophy, Gift, Loader2, Users, X, Clock, Shield, Zap
 import type { EpochId } from './types/game';
 import { formatNumber } from './lib/utils';
 import { getTodayDateStr } from './data/tasks';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // LAZY LOADED MODALS - Code split for faster initial load
