@@ -13,6 +13,7 @@ import {
   getTaskById,
   type StreakReward,
 } from '../data/tasks';
+import { shouldShowCheckIn as shouldShowCheckInLogic } from '../components/DailyRewards';
 
 export interface UseDailyContentConfig {
   dailyTasksState: GameState['dailyTasksState'];
@@ -88,8 +89,10 @@ export function useDailyContent(): UseDailyContentReturn {
    * Calculate if player should show check-in modal
    */
   const shouldShowCheckIn = useMemo(() => {
-    return lastLoginDate !== getTodayDateStr() && lastCheckIn !== getTodayDateStr();
-  }, [lastLoginDate, lastCheckIn]);
+    // lastCheckIn is managed in useGame, not here - we use the local checkInStreak state
+    // The actual lastCheckIn from game state should be passed to this hook
+    return shouldShowCheckInLogic(null, checkInStreak, lastLoginDate);
+  }, [lastLoginDate, checkInStreak]);
 
   /**
    * Claim a daily task reward
