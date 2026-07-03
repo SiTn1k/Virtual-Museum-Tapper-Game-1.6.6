@@ -428,9 +428,12 @@ export function useGame() {
   useEffect(() => {
     if (isLoading) return;
 
+    // Reduced tick interval from 100ms to 250ms (4fps instead of 10fps)
+    // This significantly reduces CPU usage while maintaining smooth visual updates
+    // For passive income games, 4fps is more than sufficient
     tickRef.current = window.setInterval(() => {
       setState(prev => applyPassiveTick(prev));
-    }, 100);
+    }, 250);
 
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);

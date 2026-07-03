@@ -1,7 +1,18 @@
-import { useRef, useCallback, useState, useEffect } from 'react';
+import { useRef, useCallback, useState, useEffect, useMemo } from 'react';
 import { TapEvent, Epoch } from '../types/game';
 import { formatNumber } from '../lib/utils';
 import { Sparkles, Zap } from 'lucide-react';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// BACKGROUND PARTICLES - Pre-computed positions (NOT recalculated on render)
+// ═══════════════════════════════════════════════════════════════════════════
+const PARTICLE_COUNT = 15;
+const BACKGROUND_PARTICLES = Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
+  left: (i * 37 + 13) % 100, // Pseudo-random but stable distribution
+  top: (i * 53 + 7) % 100,
+  delay: (i * 0.3) % 5,
+  duration: 8 + (i % 5),
+}));
 
 interface TapAreaProps {
   epoch: Epoch;
@@ -355,17 +366,17 @@ export function TapArea({
         {/* Level Up Celebration */}
         <LevelUpCelebration level={level} show={showLevelUp} />
 
-        {/* Animated background particles */}
+        {/* Animated background particles - using pre-computed positions */}
         <div className="absolute inset-0 overflow-hidden opacity-20">
-          {[...Array(15)].map((_, i) => (
+          {BACKGROUND_PARTICLES.map((particle, i) => (
             <div
               key={i}
               className="absolute w-1.5 h-1.5 bg-white rounded-full animate-float-slow"
               style={{
-                left: `${Math.random() * 100}%`,
-                top: `${Math.random() * 100}%`,
-                animationDelay: `${Math.random() * 5}s`,
-                animationDuration: `${8 + Math.random() * 4}s`,
+                left: `${particle.left}%`,
+                top: `${particle.top}%`,
+                animationDelay: `${particle.delay}s`,
+                animationDuration: `${particle.duration}s`,
               }}
             />
           ))}

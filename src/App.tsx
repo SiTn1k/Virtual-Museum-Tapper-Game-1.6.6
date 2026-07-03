@@ -1,21 +1,14 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import { useGame, type SyncStatus } from './hooks/useGame';
 import { useBattlePass } from './hooks/useBattlePass';
 import { useBackButton } from './hooks/useBackButton';
 import { TapArea } from './components/TapArea';
 import { GeneratorShop } from './components/GeneratorShop';
 import { TapUpgrade } from './components/StatsPanel';
-import { GachaModal } from './components/GachaModal';
-import { ReferralsTab } from './components/ReferralsTab';
-import { TutorialModal } from './components/TutorialModal';
-import { DailyStreakModal } from './components/DailyStreakModal';
+import { AdsGramButton } from './components/AdsGramButton';
+import { SessionAdModal, ChestAdModal, EnergyRestoreAdButton, useSessionAdTrigger, useChestAdTrigger } from './components/AdSystem';
 import { DailyRewards } from './components/DailyRewards';
 import { DailyTasksPanel } from './components/DailyTasksPanel';
-import { AdsGramButton } from './components/AdsGramButton';
-import { PrestigeButton, MuseumLaboratory } from './components/PrestigeSystem';
-import { SessionAdModal, ChestAdModal, EnergyRestoreAdButton, useSessionAdTrigger, useChestAdTrigger } from './components/AdSystem';
-import { OfflineRewardModal } from './components/OfflineRewardModal';
-import { BattlePassPanel } from './components/BattlePassPanel';
 import { EPOCHS, ARTIFACTS, getEpochById } from './data/epochs';
 import { initTelegramMiniApp, hapticImpact, hapticNotification, getTelegramWebApp, getTelegramUserId, getRawInitData } from './lib/telegram';
 import { rpcTrackSession } from './lib/rpc';
@@ -24,6 +17,33 @@ import { Crown, ShoppingBag, Trophy, Gift, Loader2, Users, X, Clock, Shield, Zap
 import type { EpochId } from './types/game';
 import { formatNumber } from './lib/utils';
 import { getTodayDateStr } from './data/tasks';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LAZY LOADED MODALS - Code split for faster initial load
+// These heavy components are loaded only when needed
+// ═══════════════════════════════════════════════════════════════════════════
+const GachaModal = lazy(() => import('./components/GachaModal').then(m => ({ default: m.GachaModal })));
+const ReferralsTab = lazy(() => import('./components/ReferralsTab').then(m => ({ default: m.ReferralsTab })));
+const TutorialModal = lazy(() => import('./components/TutorialModal').then(m => ({ default: m.TutorialModal })));
+const DailyStreakModal = lazy(() => import('./components/DailyStreakModal').then(m => ({ default: m.DailyStreakModal })));
+const PrestigeButton = lazy(() => import('./components/PrestigeSystem').then(m => ({ default: m.PrestigeButton })));
+const MuseumLaboratory = lazy(() => import('./components/PrestigeSystem').then(m => ({ default: m.MuseumLaboratory })));
+const OfflineRewardModal = lazy(() => import('./components/OfflineRewardModal').then(m => ({ default: m.OfflineRewardModal })));
+const BattlePassPanel = lazy(() => import('./components/BattlePassPanel').then(m => ({ default: m.BattlePassPanel })));
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOADING FALLBACK - Shown while lazy components load
+// ═══════════════════════════════════════════════════════════════════════════
+function ModalLoader() {
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="flex flex-col items-center gap-3">
+        <Loader2 className="w-10 h-10 animate-spin text-yellow-400" />
+        <span className="text-white/70 text-sm">Завантаження...</span>
+      </div>
+    </div>
+  );
+}
 
 type Tab = 'shop' | 'epochs' | 'artifacts' | 'referrals' | 'stats' | 'boosters';
 
@@ -241,17 +261,30 @@ function App() {
   };
 
   const completedArtifacts = state.completedArtifacts?.length || 0;
+  
   // Energy multiplier (1x to 5x based on energy level, for prestige >= 1)
-  const energyMultiplier = getEnergyMultiplier ? getEnergyMultiplier() : 1;
+  const energyMultiplier = useMemo(() => 
+    getEnergyMultiplier ? getEnergyMultiplier(state.prestigeLevel || 0, state.energy, state.prestigeResearch) : 1
+  , [getEnergyMultiplier, state.prestigeLevel, state.energy, state.prestigeResearch]);
 
-  // Prestige research XP bonus
-  const prestigeXpBonus = 1 + ((state.prestigeResearch?.xp_gain || 0) * 0.05);
+  // Prestige research XP bonus - memoized to avoid recalc on every render
+  const prestigeXpBonus = useMemo(() => 
+    1 + ((state.prestigeResearch?.xp_gain || 0) * 0.05)
+  , [state.prestigeResearch?.xp_gain]);
 
-  const effectiveTapPower = Math.max(
+  // Effective tap power - memoized expensive calculation
+  const effectiveTapPower = useMemo(() => Math.max(
     1,
     Math.round(state.tapPower * artifactMultipliers.xp * boosterMultipliers.xp * energyMultiplier * prestigeXpBonus),
     Math.round(state.passiveXpPerSecond * 0.015),
-  );
+  ), [
+    state.tapPower, 
+    artifactMultipliers.xp, 
+    boosterMultipliers.xp, 
+    energyMultiplier, 
+    prestigeXpBonus, 
+    state.passiveXpPerSecond
+  ]);
 
   // Telegram Stars purchase — real implementation
   const handleBuyBooster = useCallback(async (booster: { id: string; name: string; price: number }) => {
@@ -353,31 +386,32 @@ function App() {
         </div>
       )}
 
-      {/* Offline gains modal with x2 ad option */}
+      {/* Offline gains modal with x2 ad option - lazy loaded */}
       {offlineGains && !showError && !duplicateTab && (
-        <OfflineRewardModal
-          offlineGains={offlineGains}
-          currencyIcon={epoch.currencyIcon}
-          onClaim={async (watchAd) => {
-            if (watchAd) {
-              // Call claim-ad-reward Edge Function for x2
-              try {
-                const init_data = getRawInitData();
-                const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claim-ad-reward`, {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    init_data,
-                    telegram_id: telegramId,
-                    reward_type: 'offline_x2',
-                  }),
-                });
-                const data = await response.json();
-                if (data.success) {
-                  // Double the gains (client-side update)
-                  // The server handles the daily limit enforcement
-                }
-              } catch (err) {
+        <Suspense fallback={<ModalLoader />}>
+          <OfflineRewardModal
+            offlineGains={offlineGains}
+            currencyIcon={epoch.currencyIcon}
+            onClaim={async (watchAd) => {
+              if (watchAd) {
+                // Call claim-ad-reward Edge Function for x2
+                try {
+                  const init_data = getRawInitData();
+                  const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/claim-ad-reward`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      init_data,
+                      telegram_id: telegramId,
+                      reward_type: 'offline_x2',
+                    }),
+                  });
+                  const data = await response.json();
+                  if (data.success) {
+                    // Double the gains (client-side update)
+                    // The server handles the daily limit enforcement
+                  }
+                } catch (err) {
                 console.error('Failed to claim offline x2:', err);
               }
             }
@@ -387,6 +421,7 @@ function App() {
           canWatchAd={(state.prestigeLevel || 0) >= 1 && offlineAdsRemaining > 0}
           adsRemaining={offlineAdsRemaining}
         />
+        </Suspense>
       )}
 
       {/* Duplicate tab warning */}
@@ -1100,32 +1135,34 @@ function App() {
         </div>
       </div>
 
-      {/* Gacha Modal */}
+      {/* Gacha Modal - lazy loaded */}
       {showGacha && (
-        <GachaModal
-          epoch={epoch}
-          currency={state.currency}
-          unlockedEpochs={state.unlockedEpochs}
-          artifactParts={state.artifactParts || {}}
-          completedArtifacts={state.completedArtifacts || []}
-          artifactDupes={state.artifactDupes || {}}
-          artifactLevels={state.artifactLevels || {}}
-          prestigeLevel={state.prestigeLevel || 0}
-          onClose={() => setShowGacha(false)}
-          onRoll={(cost) => {
-            // Deduct currency optimistically
-            if (state.currency < cost) return false;
-            deductGachaCost(cost);
-            recordGachaOpen();
-            recordChestOpened();
-            return true;
-          }}
-          onRefund={(cost) => refundGachaCost(cost)}
-          onServerReward={(rewards) => {
-            processServerRewards(rewards);
-            // Currency already deducted in onRoll
-          }}
-        />
+        <Suspense fallback={<ModalLoader />}>
+          <GachaModal
+            epoch={epoch}
+            currency={state.currency}
+            unlockedEpochs={state.unlockedEpochs}
+            artifactParts={state.artifactParts || {}}
+            completedArtifacts={state.completedArtifacts || []}
+            artifactDupes={state.artifactDupes || {}}
+            artifactLevels={state.artifactLevels || {}}
+            prestigeLevel={state.prestigeLevel || 0}
+            onClose={() => setShowGacha(false)}
+            onRoll={(cost) => {
+              // Deduct currency optimistically
+              if (state.currency < cost) return false;
+              deductGachaCost(cost);
+              recordGachaOpen();
+              recordChestOpened();
+              return true;
+            }}
+            onRefund={(cost) => refundGachaCost(cost)}
+            onServerReward={(rewards) => {
+              processServerRewards(rewards);
+              // Currency already deducted in onRoll
+            }}
+          />
+        </Suspense>
       )}
 
       {/* Epoch Switcher Modal */}
@@ -1173,23 +1210,27 @@ function App() {
         </div>
       )}
 
-      {/* Tutorial Modal */}
+      {/* Tutorial Modal - lazy loaded */}
       {showTutorial && (
-        <TutorialModal
-          onClose={() => {
-            localStorage.setItem('tutorial_seen', 'true');
-            setShowTutorial(false);
-          }}
-        />
+        <Suspense fallback={<ModalLoader />}>
+          <TutorialModal
+            onClose={() => {
+              localStorage.setItem('tutorial_seen', 'true');
+              setShowTutorial(false);
+            }}
+          />
+        </Suspense>
       )}
 
-      {/* Daily Streak Modal — shown once per day on login */}
+      {/* Daily Streak Modal — shown once per day on login - lazy loaded */}
       {streakModal && !showTutorial && !showDailyRewards && (
-        <DailyStreakModal
-          streak={streakModal.streak}
-          reward={streakModal.reward}
-          onClose={dismissStreakModal}
-        />
+        <Suspense fallback={<ModalLoader />}>
+          <DailyStreakModal
+            streak={streakModal.streak}
+            reward={streakModal.reward}
+            onClose={dismissStreakModal}
+          />
+        </Suspense>
       )}
 
       {/* Daily Check-in Rewards — shown after streak modal */}

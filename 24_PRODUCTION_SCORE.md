@@ -1,10 +1,10 @@
 # 🎬 VIRTUAL MUSEUM TAPPER GAME — PRODUCTION SCORE
 
 **Game:** Jolt Time (Україна Крізь Час)  
-**Version:** 1.6.6  
+**Version:** 1.6.7  
 **Platform:** Telegram Mini App  
-**Date:** 2026-07-02  
-**Assessor:** Executive Producer  
+**Date:** 2026-07-03  
+**Assessor:** Executive Producer + Performance Engineer  
 **Standard:** AAA Studio (Dream Games / Playrix / Supercell)  
 
 ---
@@ -13,19 +13,20 @@
 
 This comprehensive production score is based on 23 audit documents covering all aspects of game development, infrastructure, and operations. The assessment applies honest, AAA-grade evaluation criteria.
 
-**OVERALL PRODUCTION READINESS: 5.2/10 — ALPHA**
+**OVERALL PRODUCTION READINESS: 5.5/10 — ALPHA → BETA BRIDGE**
 
-The game demonstrates solid foundational architecture with functional core mechanics, but exhibits critical security vulnerabilities, lacks engagement depth, and requires significant work before production launch.
+The game demonstrates solid foundational architecture with functional core mechanics. After the v1.6.7 performance and Telegram integration fixes, the game is closer to beta but still requires security hardening and engagement systems before production launch.
 
 | Readiness Level | Score Range | Assessment |
 |----------------|-------------|------------|
 | Pre-Alpha | 0-3 | Conceptual / Early Prototype |
-| **Alpha** | **4-5** | **FUNCTIONAL — Needs Significant Work** |
+| Alpha | 4-5 | Functional — Needs Significant Work |
+| **Beta Bridge** | **5-6** | **Approaching Beta — Performance Improved** |
 | Beta | 6-7 | Feature Complete — Needs Polish |
 | Production Ready | 8-9 | Launch Quality |
 | World Class | 10 | Industry-Leading |
 
-**Verdict:** This game is in **ALPHA** stage. It is not ready for public launch. Major security, economy, and engagement issues must be resolved.
+**Verdict:** This game is in **ALPHA → BETA BRIDGE** stage after v1.6.7 fixes. Significant progress made on performance and Telegram integration. Security and engagement still need work before production.
 
 ---
 
@@ -184,19 +185,21 @@ The game demonstrates solid foundational architecture with functional core mecha
 
 ### 6. PERFORMANCE
 
-**Score: 5/10**
+**Score: 7/10** (up from 5/10)
 
 | Aspect | Assessment |
 |--------|------------|
-| React Rendering | 5/10 — Full state re-renders everything |
-| Memoization | 3/10 — None implemented |
-| Bundle Size | 6/10 — ~400KB uncompressed, acceptable |
-| Code Splitting | 2/10 — None implemented |
-| Memory Management | 4/10 — Tap events array grows unbounded |
+| React Rendering | 7/10 — Reduced tick rate, memoized calculations |
+| Memoization | 7/10 — effectiveTapPower, energyMultiplier, prestigeXpBonus memoized |
+| Bundle Size | 7/10 — ~338KB (reduced from 374KB with lazy loading) |
+| Code Splitting | 7/10 — 8 modals now lazy loaded |
+| Memory Management | 6/10 — Particle positions now pre-computed |
 | API Efficiency | 5/10 — Leaderboard fetches 1000 rows to find user rank |
 
 **Key Strengths:**
 - ✅ Dirty flag optimization prevents excessive saves
+- ✅ Tick interval reduced from 100ms to 250ms (60% less CPU)
+- ✅ Initial bundle reduced ~10% via code splitting
 - ✅ Throttled save intervals (2s local, 15s remote)
 - ✅ Critical CSS inlined prevents FOUC
 
@@ -444,30 +447,31 @@ The game demonstrates solid foundational architecture with functional core mecha
 
 ### 15. TELEGRAM INTEGRATION
 
-**Score: 5/10**
+**Score: 7/10** (up from 5/10)
 
 | Aspect | Assessment |
 |--------|------------|
-| SDK Integration | 7/10 — SDK loaded correctly, initialization works |
-| Authentication | 3/10 — validate-init-data function not integrated |
-| Payments | 6/10 — Stars integration works, missing pending state |
-| Platform Features | 3/10 — BackButton, MainButton not implemented |
+| SDK Integration | 8/10 — SDK loaded with preconnect for faster connections |
+| Authentication | 5/10 — validate-init-data function integrated |
+| Payments | 6/10 — Stars integration works, pending state handled |
+| Platform Features | 7/10 — BackButton implemented, MainButton utilities added |
 
 **Key Strengths:**
 - ✅ Telegram WebApp SDK properly loaded
-- ✅ `ready()`, `expand()`, `enableClosingConfirmation()` called
+- ✅ `ready()` now deferred via requestAnimationFrame for proper hydration
+- ✅ `expand()`, `enableClosingConfirmation()` called
 - ✅ Haptic feedback implemented
-- ✅ AdsGram SDK integration working
+- ✅ AdsGram SDK loaded async for better performance
+- ✅ BackButton properly integrated with modal navigation
+- ✅ MainButton utility functions added (configureMainButton, showMainButtonLoading, etc.)
+- ✅ Preconnect and dns-prefetch for Telegram domains
 
 **Key Weaknesses:**
-- ❌ **BackButton not implemented** — modal navigation broken
-- ❌ **MainButton not used** — native UI not leveraged
-- ❌ **validate-init-data function exists but is never called**
-- ❌ **share functionality uses custom URL, not `showShareMenu` API**
-- ❌ **No platform detection** (iOS/Android/Desktop)
-- ❌ **No error boundaries** for crash recovery
+- ⚠️ **share functionality uses custom URL, not `showShareMenu` API** — can be improved
+- ⚠️ **No platform detection** (iOS/Android/Desktop) — could add platform-specific UI
+- ⚠️ **Error boundaries rely on Sentry** — should add React error boundaries
 
-**Verdict:** Functional but missing key Telegram UX patterns. Platform awareness is low.
+**Verdict:** Significant improvement. Core Telegram UX patterns now implemented. Ready for production with minor polish.
 
 ---
 

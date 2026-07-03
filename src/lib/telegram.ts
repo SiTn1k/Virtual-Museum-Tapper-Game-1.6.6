@@ -82,17 +82,21 @@ export function getTelegramWebApp(): TelegramWebApp | null {
 export function initTelegramMiniApp(): TelegramWebApp | null {
   const tg = getTelegramWebApp();
   if (tg) {
-    tg.ready();
-    tg.expand();
-    tg.enableClosingConfirmation?.();
+    // Defer ready() call to ensure SDK is fully initialized
+    // Use requestAnimationFrame to wait for the next paint cycle
+    requestAnimationFrame(() => {
+      tg.ready();
+      tg.expand();
+      tg.enableClosingConfirmation?.();
 
-    if (tg.themeParams) {
-      document.documentElement.style.setProperty('--tg-bg', tg.themeParams.bg_color || '#1a1a2e');
-      document.documentElement.style.setProperty('--tg-text', tg.themeParams.text_color || '#ffffff');
-      document.documentElement.style.setProperty('--tg-hint', tg.themeParams.hint_color || '#888888');
-      document.documentElement.style.setProperty('--tg-button', tg.themeParams.button_color || '#5078ff');
-      document.documentElement.style.setProperty('--tg-button-text', tg.themeParams.button_text_color || '#ffffff');
-    }
+      if (tg.themeParams) {
+        document.documentElement.style.setProperty('--tg-bg', tg.themeParams.bg_color || '#1a1a2e');
+        document.documentElement.style.setProperty('--tg-text', tg.themeParams.text_color || '#ffffff');
+        document.documentElement.style.setProperty('--tg-hint', tg.themeParams.hint_color || '#888888');
+        document.documentElement.style.setProperty('--tg-button', tg.themeParams.button_color || '#5078ff');
+        document.documentElement.style.setProperty('--tg-button-text', tg.themeParams.button_text_color || '#ffffff');
+      }
+    });
   }
   return tg;
 }
@@ -156,4 +160,101 @@ export function showAlert(message: string): void {
   } else {
     alert(message);
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MainButton API - Native Telegram UI Button
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface MainButtonConfig {
+  text: string;
+  color?: string;
+  textColor?: string;
+  onClick: () => void;
+  isVisible?: boolean;
+  isProgress?: boolean;
+}
+
+/**
+ * Configure and show Telegram MainButton
+ */
+export function configureMainButton(config: MainButtonConfig): () => void {
+  const tg = getTelegramWebApp();
+  if (!tg?.MainButton) return () => {};
+
+  const { text, color, textColor, onClick, isVisible = true, isProgress = false } = config;
+
+  // MainButton methods vary by platform, use type assertion for compatibility
+  const mainButton = tg.MainButton as {
+    setText?: (text: string) => void;
+    color: string;
+    textColor: string;
+    show: () => void;
+    hide: () => void;
+    showProgress: (leaveActive?: boolean) => void;
+    hideProgress: () => void;
+    onClick: (callback: () => void) => void;
+    offClick: (callback: () => void) => void;
+  };
+
+  if (mainButton.setText) {
+    mainButton.setText(text);
+  }
+  if (color) mainButton.color = color;
+  if (textColor) mainButton.textColor = textColor;
+  
+  if (isProgress) {
+    mainButton.showProgress();
+  } else {
+    mainButton.hideProgress();
+  }
+
+  if (isVisible) {
+    mainButton.show();
+  } else {
+    mainButton.hide();
+  }
+
+  const clickHandler = () => onClick();
+  mainButton.onClick(clickHandler);
+
+  // Return cleanup function
+  return () => {
+    mainButton.offClick(clickHandler);
+    mainButton.hide();
+  };
+}
+
+/**
+ * Show Telegram MainButton with loading state
+ */
+export function showMainButtonLoading(text?: string): void {
+  const tg = getTelegramWebApp();
+  if (!tg?.MainButton) return;
+  
+  const mainButton = tg.MainButton as {
+    setText?: (text: string) => void;
+    showProgress: (leaveActive?: boolean) => void;
+  };
+  
+  if (text && mainButton.setText) mainButton.setText(text);
+  mainButton.showProgress();
+}
+
+/**
+ * Hide Telegram MainButton loading state
+ */
+export function hideMainButtonLoading(): void {
+  const tg = getTelegramWebApp();
+  if (!tg?.MainButton) return;
+  (tg.MainButton as { hideProgress: () => void }).hideProgress();
+}
+
+/**
+ * Hide Telegram MainButton completely
+ */
+export function hideMainButton(): void {
+  const tg = getTelegramWebApp();
+  if (!tg?.MainButton) return;
+  (tg.MainButton as { hide: () => void }).hide();
 }
