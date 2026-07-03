@@ -28,6 +28,9 @@ export const TASK_POOL: TaskDef[] = [
   { id: 'tap_upgrade_3', type: 'upgrade_tap',   description: 'Покращ силу тапу 3 рази',      target: 3,    reward: { currency: 300 }, icon: '⚡' },
 ];
 
+// Alias for consistency with other data modules
+export const TASKS = TASK_POOL;
+
 const TASK_MAP: Record<string, TaskDef> = {};
 for (const t of TASK_POOL) TASK_MAP[t.id] = t;
 export function getTaskById(id: string): TaskDef | undefined { return TASK_MAP[id]; }
