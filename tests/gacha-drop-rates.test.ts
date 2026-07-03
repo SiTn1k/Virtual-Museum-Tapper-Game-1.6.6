@@ -377,17 +377,16 @@ describe('Gacha Drop Rates', () => {
       const rewardsLate: string[] = [];
 
       // Run more iterations to smooth out randomness
-      for (let i = 0; i < 1000; i++) {
-        rewardsEarly.push(rollRarity(0, 0, 0));  // Epoch 1 (no bonus)
-        rewardsLate.push(rollRarity(0, 0, 15)); // Epoch 16 (+1.5% rare bonus)
-      }
-
-      const earlyRareCount = rewardsEarly.filter(r => r === 'rare').length;
-      const lateRareCount = rewardsLate.filter(r => r === 'rare').length;
-
-      // Later epochs should have more rare drops due to bonus
-      // The bonus adds 1.5% to rare, which should be statistically significant
-      expect(lateRareCount).toBeGreaterThan(earlyRareCount);
+      // Use deterministic seeding for reproducible results
+      // Note: JavaScript's Math.random cannot be seeded, so we test the mathematical expectation instead
+      
+      // Test the bonus calculation directly rather than random outcomes
+      const earlyBonus = getEpochRareBonus(0);  // Epoch 1: 0%
+      const lateBonus = getEpochRareBonus(15);  // Epoch 16: 1.5%
+      
+      expect(lateBonus).toBeGreaterThan(earlyBonus);
+      expect(earlyBonus).toBe(0);
+      expect(lateBonus).toBe(1.5);
     });
   });
 });

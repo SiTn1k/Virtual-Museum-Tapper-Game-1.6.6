@@ -23,7 +23,7 @@ import {
   getUserRank,
   fetchActiveBoosters,
 } from '../lib/storage';
-import { rpcClaimOfflineIncome, rpcBuyGenerator, rpcUpgradeTap } from '../lib/rpc';
+import { rpcClaimOfflineIncome, rpcBuyGenerator, rpcUpgradeTap, rpcRecordTaps } from '../lib/rpc';
 import { hapticNotification, hapticImpact } from '../lib/telegram';
 import { initSessionManager, onDuplicateDetected, stopSessionManager } from '../lib/sessionManager';
 import type { ActiveBoosters } from '../types/game';
@@ -153,6 +153,16 @@ export function useGame() {
   const isInitialized = useRef(false);
   const dirtyRef = useRef(false);
   const isOnlineRef = useRef(true);
+
+  // ── Server-side tap validation (Phase 4) ─────────────────────────────
+  // Batch taps locally, flush to server periodically
+  const pendingTapsRef = useRef(0);
+  const serverSyncXpRef = useRef(0); // XP tracked server-side
+  const lastFlushRef = useRef(Date.now());
+  const TAP_FLUSH_INTERVAL = 1500; // ms between server sync
+  const MAX_TAPS_PER_BATCH = 10; // Server rate limit
+  const tapFlushTimerRef = useRef<number | null>(null);
+  const isSyncingRef = useRef(false);
 
   // ── Battle Pass XP Tracking ───────────────────────────────────────────
   // Callback to notify battle pass system when XP is earned
@@ -388,9 +398,20 @@ export function useGame() {
     }, REMOTE_SAVE_INTERVAL);
 
     // Flush both on unmount / tab close
-    const flush = () => {
+    const flush = async () => {
       saveLocalState(stateRef.current);
       saveRemoteState(stateRef.current);
+      // Flush pending taps to server
+      if (pendingTapsRef.current > 0) {
+        const tapsToFlush = Math.min(pendingTapsRef.current, MAX_TAPS_PER_BATCH);
+        if (import.meta.env.DEV) {
+          console.log(`[TapSync] Flushing ${tapsToFlush} pending taps on unload`);
+        }
+        // Fire and forget - don't await to not block page close
+        rpcRecordTaps(tapsToFlush).catch(e => {
+          console.error('[TapSync] Failed to flush on unload:', e);
+        });
+      }
     };
 
     window.addEventListener('beforeunload', flush);
@@ -398,6 +419,7 @@ export function useGame() {
     return () => {
       if (localSaveRef.current) clearInterval(localSaveRef.current);
       if (remoteSaveRef.current) clearInterval(remoteSaveRef.current);
+      if (tapFlushTimerRef.current) clearInterval(tapFlushTimerRef.current);
       window.removeEventListener('beforeunload', flush);
       flush();
     };
@@ -454,11 +476,90 @@ export function useGame() {
     // Notify Battle Pass system of XP earned
     notifyBattlePassXp(value);
 
+    // ── Server-side tap validation (Phase 4) ─────────────────────────────
+    // Increment pending tap counter for batched server sync
+    pendingTapsRef.current += 1;
+    serverSyncXpRef.current += value;
+
+    // Debug logging (shows in browser console)
+    if (import.meta.env.DEV && pendingTapsRef.current % 10 === 0) {
+      console.log(`[TapSync] Pending: ${pendingTapsRef.current} taps, ~${serverSyncXpRef.current} XP`);
+    }
+
     hapticImpact('light');
   }, [state, recordTap, notifyBattlePassXp]);
 
   // Backward-compatible alias
   const tap = handleTap;
+
+  // ── Flush pending taps to server ───────────────────────────────────
+  const flushPendingTaps = useCallback(async () => {
+    if (pendingTapsRef.current === 0) return;
+    if (isSyncingRef.current) {
+      console.log('[TapSync] Skipping flush - sync already in progress');
+      return;
+    }
+    if (!isOnlineRef.current) {
+      console.log('[TapSync] Skipping flush - offline');
+      return;
+    }
+
+    // Get current pending taps
+    const tapsToSync = Math.min(pendingTapsRef.current, MAX_TAPS_PER_BATCH);
+    pendingTapsRef.current -= tapsToSync;
+    lastFlushRef.current = Date.now();
+    isSyncingRef.current = true;
+
+    try {
+      const result = await rpcRecordTaps(tapsToSync);
+      if (result.ok) {
+        if (import.meta.env.DEV) {
+          console.log(`[TapSync] ✓ Synced ${tapsToSync} taps, server XP: ${result.xp_gained}`);
+        }
+      } else {
+        // Re-add taps on failure (except if rate limited)
+        if (!result.error?.includes('rate') && !result.error?.includes('Rate')) {
+          pendingTapsRef.current += tapsToSync;
+          console.warn('[TapSync] Failed to sync, re-queued:', result.error);
+        } else {
+          console.warn('[TapSync] Rate limited, skipping re-queue');
+        }
+      }
+    } catch (e) {
+      pendingTapsRef.current += tapsToSync;
+      console.error('[TapSync] Error syncing taps:', e);
+    } finally {
+      isSyncingRef.current = false;
+    }
+  }, []);
+
+  // Periodic flush of pending taps to server
+  useEffect(() => {
+    if (isLoading) return;
+
+    const flushInterval = setInterval(() => {
+      if (pendingTapsRef.current > 0) {
+        flushPendingTaps();
+      }
+    }, TAP_FLUSH_INTERVAL);
+
+    // Also flush on page unload (best effort)
+    const handleBeforeUnload = () => {
+      if (pendingTapsRef.current > 0) {
+        // Use sendBeacon if available for reliable delivery
+        const data = JSON.stringify({ action: 'record_tap', tap_count: Math.min(pendingTapsRef.current, MAX_TAPS_PER_BATCH) });
+        if (navigator.sendBeacon) {
+          navigator.sendBeacon('/functions/v1/game-action', data);
+        }
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(flushInterval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [isLoading, flushPendingTaps]);
 
   const buyGenerator = useCallback((generatorId: string) => {
     const generator = epoch.generators.find(g => g.id === generatorId);

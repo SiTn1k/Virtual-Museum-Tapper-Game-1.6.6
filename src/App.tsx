@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useGame, type SyncStatus } from './hooks/useGame';
 import { useBattlePass } from './hooks/useBattlePass';
+import { useBackButton } from './hooks/useBackButton';
 import { TapArea } from './components/TapArea';
 import { GeneratorShop } from './components/GeneratorShop';
 import { TapUpgrade } from './components/StatsPanel';
@@ -117,6 +118,50 @@ function App() {
     recordChestOpened,
     dismissChestAd
   } = useChestAdTrigger();
+
+  // Telegram BackButton integration - close the topmost modal
+  const handleBackClose = useCallback(() => {
+    if (showTutorial) {
+      setShowTutorial(false);
+    } else if (showBattlePass) {
+      setShowBattlePass(false);
+    } else if (showGacha) {
+      setShowGacha(false);
+    } else if (showEpochModal) {
+      setShowEpochModal(false);
+    } else if (showError) {
+      setShowError(null);
+    } else if (showDailyRewards) {
+      skipDailyRewards();
+    } else if (streakModal) {
+      dismissStreakModal();
+    } else if (offlineGains) {
+      dismissOfflineGains();
+    } else if (shouldShowSessionAd) {
+      dismissSessionAd();
+    } else if (shouldShowChestAd) {
+      dismissChestAd();
+    }
+  }, [showTutorial, showBattlePass, showGacha, showEpochModal, showError, 
+      showDailyRewards, skipDailyRewards, streakModal, dismissStreakModal, 
+      offlineGains, dismissOfflineGains, shouldShowSessionAd, dismissSessionAd, 
+      shouldShowChestAd, dismissChestAd]);
+
+  const { showBackButton, hideBackButton } = useBackButton(handleBackClose);
+
+  // Show BackButton when any modal is open
+  useEffect(() => {
+    const anyModalOpen = showTutorial || showBattlePass || showGacha || showEpochModal || 
+                         !!showError || showDailyRewards || !!streakModal || !!offlineGains ||
+                         shouldShowSessionAd || shouldShowChestAd;
+    if (anyModalOpen) {
+      showBackButton();
+    } else {
+      hideBackButton();
+    }
+  }, [showTutorial, showBattlePass, showGacha, showEpochModal, showError, 
+      showDailyRewards, streakModal, offlineGains, shouldShowSessionAd, shouldShowChestAd, 
+      showBackButton, hideBackButton]);
 
   // Daily energy ads tracking
   const today = getTodayDateStr();
