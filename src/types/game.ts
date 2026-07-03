@@ -124,6 +124,16 @@ export interface DailyAdViews {
   last_reset?: string;      // 'YYYY-MM-DD' UTC
 }
 
+// Pity system for gacha (Phase 20)
+// Tracks pity counters separately per rarity tier
+export interface PityState {
+  pityEpic: number;        // Counter for Epic+ pity (50 chest guarantee)
+  pityLegendary: number;    // Counter for Legendary pity (200 chest guarantee)
+  totalChests: number;      // Total chests opened (all-time)
+  lastEpicChest: number;    // Chest number when last Epic+ was dropped
+  lastLegendaryChest: number; // Chest number when last Legendary was dropped
+}
+
 export interface GameState {
   epochId: EpochId;
   level: number;

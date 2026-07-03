@@ -109,10 +109,12 @@ Deno.serve(async (req: Request) => {
 
     const validation = validateRequest(init_data);
     if (!validation.valid) {
+      console.warn(`HMAC validation failed for perform-prestige: ${validation.error}`);
       return jsonResponse({ error: validation.error || "Validation failed" }, 401);
     }
 
     if (validation.userId !== telegram_id) {
+      console.warn(`User ID mismatch in perform-prestige: expected ${validation.userId}, got ${telegram_id}`);
       return jsonResponse({ error: "User ID mismatch" }, 403);
     }
 

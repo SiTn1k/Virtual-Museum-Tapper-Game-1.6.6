@@ -7,7 +7,6 @@ import React, { useState, useMemo } from 'react';
 import { ALL_ACHIEVEMENTS, getAchievementStats } from '../data/achievements';
 import type { AchievementDef, AchievementCategory } from '../types/liveops';
 import type { AchievementProgress } from '../hooks/useAchievements';
-import { getCurrentSeason } from '../data/seasons';
 
 interface AchievementModalProps {
   achievements: AchievementProgress[];
@@ -18,13 +17,15 @@ interface AchievementModalProps {
 
 type TabType = 'all' | AchievementCategory;
 
-const CATEGORY_TABS: { key: TabType; labelUa: string; labelEn: string }[] = [
-  { key: 'all', labelUa: 'Всі', labelEn: 'All' },
-  { key: 'progression', labelUa: 'Прогресія', labelEn: 'Progression' },
-  { key: 'collection', labelUa: 'Колекція', labelEn: 'Collection' },
-  { key: 'engagement', labelUa: 'Активність', labelEn: 'Engagement' },
-  { key: 'social', labelUa: 'Соціал', labelEn: 'Social' },
-  { key: 'special', labelUa: 'Спеціальні', labelEn: 'Special' },
+const CATEGORY_TABS: { key: TabType; labelUa: string; labelEn: string; icon: string }[] = [
+  { key: 'all', labelUa: 'Всі', labelEn: 'All', icon: '🏆' },
+  { key: 'progression', labelUa: 'Прогресія', labelEn: 'Progression', icon: '📈' },
+  { key: 'combat', labelUa: 'Тапання', labelEn: 'Tapping', icon: '👆' },
+  { key: 'economy', labelUa: 'Економіка', labelEn: 'Economy', icon: '💰' },
+  { key: 'collection', labelUa: 'Колекція', labelEn: 'Collection', icon: '📦' },
+  { key: 'engagement', labelUa: 'Активність', labelEn: 'Engagement', icon: '🔥' },
+  { key: 'social', labelUa: 'Соціал', labelEn: 'Social', icon: '👥' },
+  { key: 'special', labelUa: 'Секрети', labelEn: 'Special', icon: '❓' },
 ];
 
 const RARITY_COLORS: Record<string, string> = {
@@ -233,13 +234,14 @@ export function AchievementModal({
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex items-center gap-1.5 ${
                 activeTab === tab.key
                   ? 'bg-blue-600 text-white'
                   : 'bg-gray-800 text-gray-400 hover:bg-gray-700'
               }`}
             >
-              {tab.labelUa}
+              <span>{tab.icon}</span>
+              <span>{tab.labelUa}</span>
             </button>
           ))}
         </div>

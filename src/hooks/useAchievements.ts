@@ -3,7 +3,7 @@
  * Manages achievement tracking, progress updates, and notifications
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { ALL_ACHIEVEMENTS, getAchievementById } from '../data/achievements';
 import type { AchievementDef, PlayerAchievementState, AchievementCategory } from '../types/liveops';
 import type { GameState } from '../types/game';
@@ -14,6 +14,8 @@ export interface AchievementProgress {
   isComplete: boolean;
   canEarn: boolean;
   progressPercent: number;
+  currentValue?: number;
+  targetValue?: number;
 }
 
 export interface AchievementNotification {
@@ -31,10 +33,42 @@ interface UseAchievementsReturn {
   getAchievementsByCategory: (category: AchievementCategory) => AchievementProgress[];
   getNextAchievement: (category?: AchievementCategory) => AchievementProgress | null;
   clearNotification: (achievementId: string) => void;
+  claimReward: (achievementId: string) => AchievementDef['reward'] | null;
+  getProgress: (achievementId: string) => { current: number; target: number } | null;
 }
 
 const STORAGE_KEY = 'achievement_state';
 const RECENT_UNLOCKS_MAX = 5;
+
+// Extended GameState for tracking additional stats
+interface ExtendedGameState extends GameState {
+  totalTaps?: number;
+  totalCurrencySpent?: number;
+  totalAdsWatched?: number;
+  totalGachaOpened?: number;
+  totalGachaLegendary?: number;
+  totalShares?: number;
+  streakDays?: number;
+  dailyCheckins?: number;
+  generatorsOfType?: Record<number, number>;
+  energyDepleted?: number;
+  tapsWithoutEnergy?: number;
+  offlineEarnings?: number;
+  achievementsRevealed?: number;
+}
+
+// Ukrainian epochs (1-12)
+const UKRAINIAN_EPOCHS = [
+  'trypillia', 'scythia', 'antiquity', 'kyiv_rus', 'halych_volhynia',
+  'polish_lithuanian', 'cossack', 'hetmanate', 'empire', 'revolution',
+  'soviet', 'independence'
+];
+
+// World epochs (13-20)
+const WORLD_EPOCHS = [
+  'egypt', 'greece', 'rome', 'medieval', 'renaissance',
+  'enlightenment', 'victorian', 'modern_world'
+];
 
 /**
  * Check if prerequisites are met for an achievement
@@ -47,79 +81,183 @@ function checkPrerequisites(achievement: AchievementDef, completedIds: Set<strin
 }
 
 /**
+ * Count completed Ukrainian epochs
+ */
+function countUkrainianEpochs(unlockedEpochs: string[]): number {
+  return unlockedEpochs.filter(e => UKRAINIAN_EPOCHS.includes(e as typeof UKRAINIAN_EPOCHS[number])).length;
+}
+
+/**
+ * Count completed world epochs
+ */
+function countWorldEpochs(unlockedEpochs: string[]): number {
+  return unlockedEpochs.filter(e => WORLD_EPOCHS.includes(e as typeof WORLD_EPOCHS[number])).length;
+}
+
+/**
+ * Count generators purchased
+ */
+function countGenerators(ownedGenerators: GameState['ownedGenerators']): number {
+  return ownedGenerators?.reduce((sum, gen) => sum + 1, 0) || 0;
+}
+
+/**
  * Calculate achievement progress based on game state
  */
-function calculateProgress(achievement: AchievementDef, gameState: GameState): number {
+function calculateProgress(
+  achievement: AchievementDef, 
+  gameState: ExtendedGameState
+): { progress: number; current: number; target: number } {
   const { requirement } = achievement;
-  
+  let current = 0;
+  let target = requirement.target;
+
   switch (requirement.type) {
     case 'level':
-      return Math.min(1, gameState.level / requirement.target);
-    
-    case 'currency_earned':
-      return Math.min(1, gameState.totalCurrencyEarned / requirement.target);
-    
-    case 'prestige_count':
-      return Math.min(1, gameState.prestigeLevel / requirement.target);
+      current = gameState.level;
+      return { progress: Math.min(1, current / target), current, target };
     
     case 'tap_count':
-      return Math.min(1, (gameState.totalXp || 0) / requirement.target);
-    
-    case 'epoch_complete': {
-      const epochCount = gameState.unlockedEpochs?.length || 0;
-      return Math.min(1, epochCount / requirement.target);
-    }
-    
-    case 'artifact_collected': {
-      const artifactCount = gameState.completedArtifacts?.length || 0;
-      return Math.min(1, artifactCount / requirement.target);
-    }
+      current = gameState.totalTaps || 0;
+      return { progress: Math.min(1, current / target), current, target };
     
     case 'tap_power':
-      return Math.min(1, gameState.tapPower / requirement.target);
+      current = gameState.tapPower;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'prestige_count':
+      current = gameState.prestigeLevel;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'epoch_complete':
+      // Count Ukrainian epochs
+      current = countUkrainianEpochs(gameState.unlockedEpochs);
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'world_epochs_visited':
+      // Count world epochs
+      current = countWorldEpochs(gameState.unlockedEpochs);
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'artifact_collected':
+      current = gameState.completedArtifacts?.length || 0;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'generators_purchased':
+      current = countGenerators(gameState.ownedGenerators);
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'generator_type_owned': {
+      const typeOwned = gameState.generatorsOfType?.[requirement.secondaryTarget || 0] || 0;
+      current = typeOwned;
+      target = requirement.target;
+      return { progress: Math.min(1, current / target), current, target };
+    }
+    
+    case 'total_currency_earned':
+      current = gameState.totalCurrencyEarned;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'currency_spent':
+      current = gameState.totalCurrencySpent || 0;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'referral_count':
+      current = gameState.referralsCount;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'share_count':
+      current = gameState.totalShares || 0;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'streak_days':
+      current = gameState.streakDays || gameState.dailyStreak;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'daily_checkin_count':
+      current = gameState.dailyCheckins || gameState.checkInStreak;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'gacha_opened':
+      current = gameState.totalGachaOpened || 0;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'gacha_legendary':
+      current = gameState.totalGachaLegendary || 0;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'ads_watched':
+      current = gameState.totalAdsWatched || 0;
+      return { progress: Math.min(1, current / target), current, target };
+    
+    case 'leaderboard_rank':
+      // This requires leaderboard API - return 0 for now
+      return { progress: 0, current: 0, target };
+    
+    case 'epoch_artifacts_complete': {
+      // Count epochs where all artifacts are collected
+      const artifactLevels = gameState.artifactLevels || {};
+      const collectedPerEpoch: Record<string, number> = {};
+      for (const [artifactId, level] of Object.entries(artifactLevels)) {
+        if (level > 0) {
+          // Group by epoch prefix
+          const epochKey = artifactId.split('_')[0];
+          collectedPerEpoch[epochKey] = (collectedPerEpoch[epochKey] || 0) + 1;
+        }
+      }
+      current = Object.keys(collectedPerEpoch).length;
+      return { progress: Math.min(1, current / target), current, target };
+    }
+    
+    case 'rarity_collected': {
+      // secondaryTarget is rarity level (1=common, 2=rare, 3=epic, 4=legendary, 5=secret)
+      const artifactLevels = gameState.artifactLevels || {};
+      const requiredRarity = requirement.secondaryTarget || 4;
+      // This is simplified - in reality you'd need to track rarity of each artifact
+      const count = Object.values(artifactLevels).filter(l => l > 0).length;
+      current = count >= requiredRarity ? 1 : 0;
+      return { progress: current, current, target: 1 };
+    }
+    
+    case 'artifact_max_level': {
+      const artifactLevels = gameState.artifactLevels || {};
+      current = Object.values(artifactLevels).filter(l => l >= 4).length;
+      return { progress: Math.min(1, current / target), current, target };
+    }
     
     case 'energy_capacity': {
       const capacityResearch = gameState.prestigeResearch?.energy_capacity || 0;
       const maxEnergy = 1000 + (capacityResearch * 100);
-      return Math.min(1, maxEnergy / requirement.target);
+      current = maxEnergy;
+      return { progress: Math.min(1, current / target), current, target };
     }
     
-    case 'gacha_opened': {
-      // Track gacha opens via artifact parts collected
-      const artifactCount = gameState.completedArtifacts?.length || 0;
-      return Math.min(1, artifactCount / requirement.target);
-    }
+    case 'sit_studio_complete':
+      current = gameState.sitStudioCompleted ? 1 : 0;
+      return { progress: current, current, target: 1 };
     
-    case 'ads_watched': {
-      // Use dailyAdViews as proxy for ads watched
-      const adsCount = gameState.dailyAdViews ? Object.keys(gameState.dailyAdViews).length : 0;
-      return Math.min(1, adsCount / requirement.target);
-    }
+    case 'energy_depleted':
+      current = gameState.energyDepleted || 0;
+      return { progress: Math.min(1, current / target), current, target };
     
-    case 'generator_count': {
-      const genCount = gameState.ownedGenerators?.length || 0;
-      return Math.min(1, genCount / requirement.target);
-    }
+    case 'tap_no_energy':
+      current = gameState.tapsWithoutEnergy || 0;
+      return { progress: Math.min(1, current / target), current, target };
     
-    case 'world_epochs_visited': {
-      const worldEpochs = ['mesopotamia', 'ancient_egypt', 'roman_empire', 'greek_civilization', 
-                           'medieval_europe', 'renaissance', 'colonial_era', 'industrial_revolution'];
-      const visitedWorld = worldEpochs.filter(e => gameState.unlockedEpochs?.includes(e)).length;
-      return Math.min(1, visitedWorld / requirement.target);
-    }
+    case 'offline_earnings':
+      current = gameState.offlineEarnings || 0;
+      return { progress: Math.min(1, current / target), current, target };
     
-    case 'sit_studio_complete': {
-      // This is tracked separately in SitStudio - use placeholder
-      return 0;
-    }
+    case 'achievements_revealed':
+      current = gameState.achievementsRevealed || 0;
+      return { progress: Math.min(1, current / target), current, target };
     
-    case 'event_participation': {
+    case 'event_participation':
       // Event participation tracked separately
-      return 0;
-    }
+      return { progress: 0, current: 0, target };
     
     default:
-      return 0;
+      return { progress: 0, current: 0, target };
   }
 }
 
@@ -147,6 +285,7 @@ export function useAchievements(initialState?: PlayerAchievementState[]): UseAch
   });
   
   const [recentUnlocks, setRecentUnlocks] = useState<AchievementNotification[]>([]);
+  const completedIdsRef = useRef(new Set<string>());
   
   // Save to localStorage when state changes
   useEffect(() => {
@@ -157,36 +296,40 @@ export function useAchievements(initialState?: PlayerAchievementState[]): UseAch
     }
   }, [playerAchievements]);
   
-  // Build completed set for prerequisite checking
-  const completedIds = new Set(
-    playerAchievements.filter(pa => pa.completed).map(pa => pa.id)
-  );
+  // Update completedIdsRef when playerAchievements changes
+  useEffect(() => {
+    completedIdsRef.current = new Set(
+      playerAchievements.filter(pa => pa.completed).map(pa => pa.id)
+    );
+  }, [playerAchievements]);
   
   // Build achievement progress map
   const achievementMap = new Map(
     playerAchievements.map(pa => [pa.id, pa])
   );
   
-  // Calculate full achievement progress list
-  const achievements: AchievementProgress[] = ALL_ACHIEVEMENTS.map(achievement => {
-    const state = achievementMap.get(achievement.id) || {
-      id: achievement.id,
-      progress: 0,
-      completed: false,
-      notified: false,
-    };
-    
-    const canEarn = checkPrerequisites(achievement, completedIds);
-    const isComplete = state.completed;
-    const progressPercent = isComplete ? 100 : Math.round(state.progress * 100);
-    
-    return {
-      achievement,
-      state,
-      isComplete,
-      canEarn,
-      progressPercent,
-    };
+  // Calculate full achievement progress list (memoized - use game state for live updates)
+  const [achievements, setAchievements] = useState<AchievementProgress[]>(() => {
+    return ALL_ACHIEVEMENTS.map(achievement => {
+      const state = achievementMap.get(achievement.id) || {
+        id: achievement.id,
+        progress: 0,
+        completed: false,
+        notified: false,
+      };
+      
+      const canEarn = checkPrerequisites(achievement, completedIdsRef.current);
+      const isComplete = state.completed;
+      const progressPercent = isComplete ? 100 : Math.round(state.progress * 100);
+      
+      return {
+        achievement,
+        state,
+        isComplete,
+        canEarn,
+        progressPercent,
+      };
+    });
   });
   
   const completedCount = playerAchievements.filter(pa => pa.completed).length;
@@ -199,6 +342,7 @@ export function useAchievements(initialState?: PlayerAchievementState[]): UseAch
   const checkAchievements = useCallback((gameState: GameState): AchievementNotification[] => {
     const newUnlocks: AchievementNotification[] = [];
     const now = new Date().toISOString();
+    const extendedState = gameState as ExtendedGameState;
     
     setPlayerAchievements(prev => {
       const updated = [...prev];
@@ -218,10 +362,10 @@ export function useAchievements(initialState?: PlayerAchievementState[]): UseAch
         }
         
         // Check prerequisites
-        if (!checkPrerequisites(achievement, completedIds)) continue;
+        if (!checkPrerequisites(achievement, completedIdsRef.current)) continue;
         
         // Calculate progress
-        const progress = calculateProgress(achievement, gameState);
+        const { progress, current, target } = calculateProgress(achievement, extendedState);
         
         // Check if completed
         const isNowComplete = progress >= 1;
@@ -283,7 +427,7 @@ export function useAchievements(initialState?: PlayerAchievementState[]): UseAch
     }
     
     return newUnlocks;
-  }, [completedIds]);
+  }, []);
   
   /**
    * Claim an achievement reward (mark as acknowledged)
@@ -309,6 +453,33 @@ export function useAchievements(initialState?: PlayerAchievementState[]): UseAch
     setRecentUnlocks(prev => prev.filter(u => u.achievement.id !== achievementId));
     
     return true;
+  }, []);
+  
+  /**
+   * Get achievement reward for claiming
+   */
+  const claimReward = useCallback((achievementId: string): AchievementDef['reward'] | null => {
+    const achievement = getAchievementById(achievementId);
+    if (!achievement) return null;
+    
+    const state = achievementMap.get(achievementId);
+    if (!state?.completed) return null;
+    
+    return achievement.reward;
+  }, []);
+  
+  /**
+   * Get progress for a specific achievement
+   */
+  const getProgress = useCallback((achievementId: string): { current: number; target: number } | null => {
+    const achievement = getAchievementById(achievementId);
+    if (!achievement) return null;
+    
+    // Return target info - current progress is tracked in state
+    return {
+      current: 0,
+      target: achievement.requirement.target,
+    };
   }, []);
   
   /**
@@ -348,9 +519,11 @@ export function useAchievements(initialState?: PlayerAchievementState[]): UseAch
     recentUnlocks,
     checkAchievements,
     claimAchievement,
+    claimReward,
     getAchievementsByCategory,
     getNextAchievement,
     clearNotification,
+    getProgress,
   };
 }
 

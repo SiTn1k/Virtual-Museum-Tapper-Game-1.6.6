@@ -4,9 +4,7 @@ import {
   EPOCHS,
   ARTIFACTS,
   getEpochById,
-  getCurrentEpochByLevel,
   getGeneratorCost,
-  getGeneratorProduction,
 } from '../data/epochs';
 import {
   getTodayDateStr,
@@ -25,80 +23,22 @@ import {
   getUserRank,
   fetchActiveBoosters,
 } from '../lib/storage';
-import { rpcClaimOfflineIncome, rpcBuyGenerator, rpcUpgradeTap, rpcValidatePassiveXp } from '../lib/rpc';
+import { rpcClaimOfflineIncome, rpcBuyGenerator, rpcUpgradeTap } from '../lib/rpc';
 import { hapticNotification, hapticImpact } from '../lib/telegram';
+import { initSessionManager, onDuplicateDetected, stopSessionManager } from '../lib/sessionManager';
 import type { ActiveBoosters } from '../types/game';
+import { useTaps } from './useTaps';
+import {
+  calculatePassiveXp,
+  calculateXpToLevel,
+  applyPassiveTick,
+  validatePassiveXp,
+} from './usePassiveIncome';
+import { useDailyContent } from './useDailyContent';
 
 const LOCAL_SAVE_INTERVAL = 2000;
 const REMOTE_SAVE_INTERVAL = 15000;
 const MAX_LEVEL = 999;
-const TAB_ID = `tab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-
-/**
- * XP curve: tuned for ~15 hours to reach Epoch 3 (level 100).
- *
- * Target time per level:
- * - Epoch 1: 60s → 5 min (avg ~3 min)
- * - Epoch 2: 90s → 8 min (avg ~5 min)
- * - Epoch 3+: 2 min → 15 min (progressive slowdown)
- *
- * Each epoch has its own passive XP/s estimate based on generators.
- */
-function calculateXpToLevel(level: number): number {
-  const epoch = getCurrentEpochByLevel(level);
-  const { min, max } = epoch.levelRange;
-  const rangeSize = Math.max(1, max - min + 1);
-  const progress = Math.min(1, Math.max(0, (level - min) / rangeSize)); // 0 at epoch start, ~1 at end
-
-  // Target time by epoch:
-  // Epoch 1: 60s → 5 min (total ~6 min for 50 levels would be ideal but let's make it realistic)
-  // Epoch 2: 90s → 8 min
-  // Epoch 3+: 2 min → 15 min
-  const epochIndex = EPOCHS.findIndex(e => e.id === epoch.id);
-  let minSeconds: number;
-  let maxSeconds: number;
-
-  if (epochIndex === 0) {
-    // Epoch 1: 60s → 300s (5 min) - avg ~3 min per level = ~2.5 hr for 50 levels
-    minSeconds = 60;
-    maxSeconds = 300;
-  } else if (epochIndex === 1) {
-    // Epoch 2: 60s → 480s (8 min) - avg ~4.5 min = ~3.75 hr for 50 levels
-    minSeconds = 60;
-    maxSeconds = 480;
-  } else if (epochIndex === 2) {
-    // Epoch 3: 120s → 900s (15 min) - avg ~8.5 min = ~7 hr for 50 levels
-    minSeconds = 120;
-    maxSeconds = 900;
-  } else {
-    // Later epochs: progressively harder
-    minSeconds = 120 + (epochIndex - 3) * 60;
-    maxSeconds = 1800 + (epochIndex - 3) * 600;
-  }
-
-  const targetSeconds = minSeconds + progress * (maxSeconds - minSeconds);
-
-  // Estimate passive XP/s for this level within the epoch
-  // Use the epoch's base production scaling × level factor
-  // The sum of all generators at roughly (level - min + 1) levels gives a good estimate
-  const levelInEpoch = Math.max(1, level - min + 1);
-  const estimatedPassive = estimatePassiveForEpoch(epoch, levelInEpoch);
-
-  return Math.max(50, Math.floor(estimatedPassive * targetSeconds));
-}
-
-function estimatePassiveForEpoch(epoch: Epoch, levelInEpoch: number): number {
-  // Rough estimate: sum of production if player owns ~2 generators per tier
-  // scaled by their level within the epoch
-  const tierWeights = [1, 0.5, 0.25, 0.1, 0.03]; // cheaper generators are bought more
-  let total = 0;
-  for (let i = 0; i < epoch.generators.length && i < tierWeights.length; i++) {
-    const g = epoch.generators[i];
-    const owned = Math.max(1, Math.floor(levelInEpoch * tierWeights[i]));
-    total += g.baseProduction * owned;
-  }
-  return Math.max(1, total);
-}
 
 export interface ArtifactMultipliers {
   xp: number;
@@ -199,13 +139,11 @@ export type SyncStatus = 'synced' | 'syncing' | 'offline' | 'error';
 export function useGame() {
   const [isLoading, setIsLoading] = useState(true);
   const [state, setState] = useState<GameState>(INITIAL_STATE);
-  const [tapEvents, setTapEvents] = useState<TapEvent[]>([]);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [userRank, setUserRank] = useState<number | null>(null);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [offlineGains, setOfflineGains] = useState<{ xp: number; currency: number } | null>(null);
   const [duplicateTab, setDuplicateTab] = useState(false);
-  const [streakModal, setStreakModal] = useState<{ streak: number; reward: StreakReward } | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [showDailyRewards, setShowDailyRewards] = useState(false);
@@ -215,6 +153,29 @@ export function useGame() {
   const isInitialized = useRef(false);
   const dirtyRef = useRef(false);
   const isOnlineRef = useRef(true);
+
+  // ── Battle Pass XP Tracking ───────────────────────────────────────────
+  // Callback to notify battle pass system when XP is earned
+  const battlePassXpCallbackRef = useRef<((xp: number) => void) | null>(null);
+
+  /**
+   * Register a callback to be called when XP is earned
+   * Used by Battle Pass system to track season progress
+   */
+  const registerBattlePassXpCallback = useCallback((callback: ((xp: number) => void) | null) => {
+    battlePassXpCallbackRef.current = callback;
+  }, []);
+
+  // Helper to notify battle pass of XP earned
+  const notifyBattlePassXp = useCallback((xp: number) => {
+    if (battlePassXpCallbackRef.current) {
+      battlePassXpCallbackRef.current(xp);
+    }
+  }, []);
+
+  // Use sub-hooks for focused functionality
+  const { tapEvents, recordTap, getTapValue, getEnergyMultiplier } = useTaps();
+  const { dailyTasksState, streakModal, dismissStreakModal } = useDailyContent();
 
   // ── Online/offline detection ────────────────────────────────────────
   useEffect(() => {
@@ -242,64 +203,26 @@ export function useGame() {
     };
   }, []);
 
-  // Multiple tab detection
+  // Multiple tab detection using improved session manager
   useEffect(() => {
-    const STORAGE_KEY = 'game_active_tab';
+    // Initialize the session manager
+    initSessionManager();
 
-    // Claim active tab on mount
-    localStorage.setItem(STORAGE_KEY, TAB_ID);
+    // Register callback for duplicate detection
+    const unsubscribe = onDuplicateDetected((isDuplicate, source) => {
+      setDuplicateTab(isDuplicate);
+    });
 
-    const checkTab = () => {
-      const activeTab = localStorage.getItem(STORAGE_KEY);
-      if (activeTab && activeTab !== TAB_ID) {
-        setDuplicateTab(true);
-      } else {
-        // Other tab closed/released — reclaim and clear warning
-        localStorage.setItem(STORAGE_KEY, TAB_ID);
-        setDuplicateTab(false);
-      }
-    };
-
-    const interval = setInterval(checkTab, 1000);
-
-    // Listen for storage events from other tabs
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key !== STORAGE_KEY) return;
-      if (e.newValue && e.newValue !== TAB_ID) {
-        setDuplicateTab(true);
-      } else {
-        setDuplicateTab(false);
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-
+    // Cleanup on unmount
     return () => {
-      clearInterval(interval);
-      window.removeEventListener('storage', handleStorage);
-      if (localStorage.getItem(STORAGE_KEY) === TAB_ID) {
-        localStorage.removeItem(STORAGE_KEY);
-      }
+      unsubscribe();
+      stopSessionManager();
     };
   }, []);
 
   // Use the player's selected epoch (state.epochId) if available
   // Fall back to level-based epoch only for new players
   const epoch = getEpochById(state.epochId);
-
-  const calculatePassiveXp = useCallback((owned: OwnedGenerator[], unlockedEpochs: EpochId[]): number => {
-    // Sum production from all owned generators across all unlocked epochs
-    return owned.reduce((total, og) => {
-      // Search for generator in all unlocked epochs
-      for (const epochId of unlockedEpochs) {
-        const epochData = getEpochById(epochId);
-        const generator = epochData.generators.find(g => g.id === og.generatorId);
-        if (generator) {
-          return total + getGeneratorProduction(generator, og.level);
-        }
-      }
-      return total;
-    }, 0);
-  }, []);
 
   useEffect(() => {
     if (isInitialized.current) return;
@@ -423,7 +346,7 @@ export function useGame() {
       }
       setIsLoading(false);
     })();
-  }, [calculatePassiveXp]);
+  }, []);
 
   // Use a stable ref for save so we don't recreate the interval on every state update
   const stateRef = useRef(state);
@@ -484,97 +407,24 @@ export function useGame() {
     if (isLoading) return;
 
     tickRef.current = window.setInterval(() => {
-      setState(prev => {
-        const basePassiveXp = calculatePassiveXp(prev.ownedGenerators, prev.unlockedEpochs);
-        const { passive: passMult, currency: artCurrMult } = getArtifactMultipliers(prev.completedArtifacts || [], prev.artifactDupes || {});
-        const { xp: boostXpMult, currency: boostCurrMult } = getBoosterMultipliers(prev.activeBoosters || {});
-        const effectivePassiveXp = basePassiveXp * passMult * boostXpMult * (1 + ((prev.prestigeResearch?.passive_income || 0) * 0.10));
-
-        const xpGainThisTick = effectivePassiveXp / 10;
-        let xp = prev.xp + xpGainThisTick;
-        const newTotalXp = prev.totalXp + xpGainThisTick;
-
-        const currMult = artCurrMult * boostCurrMult;
-        let newLevel = prev.level;
-        let xpToNext = prev.xpToNextLevel;
-        let newCurrency = prev.currency;
-        let newTotalCurrency = prev.totalCurrencyEarned;
-        // Reuse same array reference if no epoch unlocks happen — avoids cascading re-renders
-        let newUnlocked: string[] | null = null;
-
-        while (xp >= xpToNext && newLevel < MAX_LEVEL) {
-          xp -= xpToNext;
-          newLevel++;
-          xpToNext = calculateXpToLevel(newLevel);
-          const levelReward = Math.round(newLevel * 50 * currMult);
-          newCurrency += levelReward;
-          newTotalCurrency += levelReward;
-
-          EPOCHS.forEach(e => {
-            if (e.unlockLevel === newLevel && !prev.unlockedEpochs.includes(e.id)) {
-              if (!newUnlocked) newUnlocked = [...prev.unlockedEpochs];
-              if (!newUnlocked.includes(e.id)) newUnlocked.push(e.id);
-            }
-          });
-        }
-
-        const unlockedEpochs = newUnlocked ?? prev.unlockedEpochs;
-        const newEpochUnlocked = newUnlocked !== null;
-        const epochId = newEpochUnlocked
-          ? getCurrentEpochByLevel(newLevel).id
-          : prev.epochId;
-
-        return {
-          ...prev,
-          xp,
-          totalXp: newTotalXp,
-          level: newLevel,
-          xpToNextLevel: xpToNext,
-          epochId,
-          passiveXpPerSecond: effectivePassiveXp,
-          currency: newCurrency,
-          totalCurrencyEarned: newTotalCurrency,
-          unlockedEpochs,
-        };
-      });
+      setState(prev => applyPassiveTick(prev));
     }, 100);
 
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
     };
-  }, [isLoading, calculatePassiveXp]);
+  }, [isLoading]);
 
   // Phase 8: Periodic passive XP validation
   // Validates that client calculation matches server authoritative value
   useEffect(() => {
     if (isLoading) return;
 
-    const validatePassiveXp = async () => {
-      const telegramIdLocal = getTelegramUserId();
-      if (!telegramIdLocal) return;
-
-      try {
-        const result = await rpcValidatePassiveXp(telegramIdLocal);
-        if (result.success && !result.is_valid && result.expected_passive_xp !== undefined) {
-          // Server has a different value - this could indicate manipulation
-          // Log for analytics but don't auto-correct (could be legitimate desync)
-          console.warn('Passive XP discrepancy detected:', {
-            expected: result.expected_passive_xp,
-            current: result.current_passive_xp,
-            discrepancy: result.discrepancy,
-          });
-        }
-      } catch (e) {
-        // Silently fail - passive XP validation is best-effort
-        console.debug('Passive XP validation failed:', e);
-      }
-    };
+    // Initial validation after 5 seconds
+    const timeout = setTimeout(validatePassiveXp, 5000);
 
     // Validate passive XP every 60 seconds
     const interval = setInterval(validatePassiveXp, 60000);
-
-    // Initial validation after 5 seconds
-    const timeout = setTimeout(validatePassiveXp, 5000);
 
     return () => {
       clearInterval(interval);
@@ -582,68 +432,33 @@ export function useGame() {
     };
   }, [isLoading]);
 
-  const tap = useCallback((x: number, y: number) => {
-    const eventId = Math.random().toString(36).substr(2, 9);
-
-    setState(prev => {
-      const { xp: artXpMult } = getArtifactMultipliers(prev.completedArtifacts || [], prev.artifactDupes || {});
-      const { xp: boostXpMult } = getBoosterMultipliers(prev.activeBoosters || {});
-
-      // Phase 6: Progressive energy multiplier (1x to 5x based on energy %)
-      const getEnergyMult = () => {
-        if ((prev.prestigeLevel || 0) < 1) return 1;
-        const energy = prev.energy || 0;
-        const maxEnergy = 1000 + ((prev.prestigeResearch?.energy_capacity || 0) * 100);
-        if (energy <= 0) return 1;
-        const pct = Math.min(1, energy / maxEnergy);
-        if (pct < 0.2) return 1;
-        if (pct > 0.8) return 5;
-        return 1 + ((pct - 0.2) / 0.6) * 4;
-      };
-      const energyMult = getEnergyMult();
-
-      // Apply prestige research XP bonus
-      const prestigeXpBonus = 1 + ((prev.prestigeResearch?.xp_gain || 0) * 0.05);
-      // Apply tap_power bonus: +1 base tap power per level
-      const tapPowerBonus = prev.prestigeResearch?.tap_power || 0;
-
-      const baseTap = Math.max(1, Math.round((prev.tapPower + tapPowerBonus) * artXpMult * boostXpMult * energyMult * prestigeXpBonus));
-      const passiveFloor = Math.round(prev.passiveXpPerSecond * 0.015);
-      const value = Math.max(baseTap, passiveFloor);
-
-      setTapEvents(te => [
-        ...te.slice(-9),
-        { id: eventId, x, y, value, createdAt: Date.now() },
-      ]);
-      setTimeout(() => {
-        setTapEvents(te => te.filter(e => e.id !== eventId));
-      }, 1000);
-
-      // Track daily task counters for tap and earn_xp types
-      const tasks = prev.dailyTasksState;
-      const updatedTasks = tasks
-        ? {
-            ...tasks,
-            counters: {
-              ...tasks.counters,
-              tap: tasks.counters.tap + 1,
-              earn_xp: tasks.counters.earn_xp + value,
-            },
-          }
-        : tasks;
-
-      // Phase 6: Energy is now a passive multiplier (no per-tap consumption)
-      // Energy regenerates over time via regenerateEnergy(), not per tap
-
-      return {
-        ...prev,
-        xp: prev.xp + value,
-        totalXp: prev.totalXp + value,
-        dailyTasksState: updatedTasks,
-        // No energy change on tap - passive regeneration only
-      };
+  // Record a tap - uses useTaps hook for visual feedback
+  const handleTap = useCallback((x: number, y: number) => {
+    const { value, updatedTasks } = recordTap(x, y, state.tapPower, state.passiveXpPerSecond, {
+      completedArtifacts: state.completedArtifacts,
+      artifactDupes: state.artifactDupes,
+      activeBoosters: state.activeBoosters,
+      prestigeLevel: state.prestigeLevel,
+      prestigeResearch: state.prestigeResearch,
+      energy: state.energy,
+      dailyTasksState: state.dailyTasksState,
     });
-  }, []);
+
+    setState(prev => ({
+      ...prev,
+      xp: prev.xp + value,
+      totalXp: prev.totalXp + value,
+      dailyTasksState: updatedTasks,
+    }));
+
+    // Notify Battle Pass system of XP earned
+    notifyBattlePassXp(value);
+
+    hapticImpact('light');
+  }, [state, recordTap, notifyBattlePassXp]);
+
+  // Backward-compatible alias
+  const tap = handleTap;
 
   const buyGenerator = useCallback((generatorId: string) => {
     const generator = epoch.generators.find(g => g.id === generatorId);
@@ -697,7 +512,7 @@ export function useGame() {
     });
 
     return true;
-  }, [epoch.generators, epoch.id, state.currency, state.ownedGenerators, calculatePassiveXp]);
+  }, [epoch.generators, epoch.id, state.currency, state.ownedGenerators]);
 
   const upgradeTapPower = useCallback(() => {
     const rawCost = 25 * Math.pow(1.8, state.tapPower - 1);
@@ -881,12 +696,13 @@ export function useGame() {
     });
   }, []);
 
-  const dismissStreakModal = useCallback(() => setStreakModal(null), []);
   const dismissConnectionError = useCallback(() => setConnectionError(null), []);
 
   const claimDailyReward = useCallback(() => {
     const today = getTodayDateStr();
     const yesterday = getYesterdayDateStr();
+
+    let earnedXp = 0;
 
     setState(prev => {
       if (prev.lastCheckIn === today) return prev; // already claimed today
@@ -916,6 +732,7 @@ export function useGame() {
 
       // For day 7 special: grant a gacha ticket by adding 100 currency equivalent
       const bonusCurrency = reward.currency + (dayInWeek === 7 ? 100 : 0);
+      earnedXp = reward.xp;
 
       return {
         ...prev,
@@ -928,8 +745,13 @@ export function useGame() {
       };
     });
 
+    // Notify Battle Pass system
+    if (earnedXp > 0) {
+      notifyBattlePassXp(earnedXp);
+    }
+
     setShowDailyRewards(false);
-  }, []);
+  }, [notifyBattlePassXp]);
 
   const switchEpoch = useCallback((epochId: EpochId) => {
     if (!state.unlockedEpochs.includes(epochId)) return;
@@ -1094,21 +916,6 @@ export function useGame() {
     return true;
   }, [state.prestigeLevel, state.energy]);
 
-  // Get energy multiplier: progressive from 1x to 5x based on energy percentage
-  // Below 20% energy = 1x, above 80% = 5x, linear interpolation in between
-  const getEnergyMultiplier = useCallback(() => {
-    if ((state.prestigeLevel || 0) < 1) return 1;
-    const energy = state.energy || 0;
-    const maxEnergy = 1000 + ((state.prestigeResearch?.energy_capacity || 0) * 100);
-    if (energy <= 0) return 1;
-    const pct = Math.min(1, energy / maxEnergy);
-    // Smooth curve: 0%→1x, 20%→1x, 80%→5x, 100%→5x
-    if (pct < 0.2) return 1;
-    if (pct > 0.8) return 5;
-    // Linear interpolation from 1 to 5 between 20% and 80%
-    return 1 + ((pct - 0.2) / 0.6) * 4;
-  }, [state.prestigeLevel, state.energy, state.prestigeResearch]);
-
   // Regenerate energy: +10 energy per 30 seconds (20/minute total)
   // Phase 6: Faster regeneration for better gameplay feel
   const regenerateEnergy = useCallback(() => {
@@ -1204,5 +1011,7 @@ export function useGame() {
     useEnergy,
     getEnergyMultiplier,
     regenerateEnergy,
+    // Battle Pass Integration
+    registerBattlePassXpCallback,
   };
 }

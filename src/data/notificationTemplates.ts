@@ -183,8 +183,8 @@ const ENERGY_NOTIFICATIONS: NotificationTemplate[] = [
       en: '⚡ Energy restored!',
     },
     body: {
-      ua: 'Твоя енергія повністю відновлена! Час для тапання з x5 множником!',
-      en: 'Your energy is fully restored! Time to tap with x5 multiplier!',
+      ua: 'Твоя енергія повністю відновлена! Час для тапання з максимальним множником!',
+      en: 'Your energy is fully restored! Time to tap with maximum multiplier!',
     },
     actionUrl: 'game://home',
     actionText: {

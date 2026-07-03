@@ -9,6 +9,11 @@ import type {
   AnalyticsEventType,
   PlayerSegmentType,
 } from '../types/liveops';
+import {
+  getAllABTestAssignments,
+  syncABTestAssignmentsToServer,
+  formatVariantForAnalytics,
+} from '../lib/abTest';
 
 // ============================================================================
 // ANALYTICS CONFIGURATION
@@ -43,6 +48,11 @@ export function initAnalytics(tgId: number): void {
   if (flushTimer === null) {
     flushTimer = window.setInterval(flushEvents, FLUSH_INTERVAL);
   }
+  
+  // Sync A/B test assignments to server
+  syncABTestAssignmentsToServer(tgId).catch(err => {
+    console.warn('[Analytics] Failed to sync A/B test assignments:', err);
+  });
   
   // Track session start
   trackEvent('session_start', {
@@ -92,6 +102,10 @@ export function trackEvent(
     return;
   }
   
+  // Get all experiment participations for tracking
+  const abAssignments = getAllABTestAssignments(telegramId);
+  const experimentParticipations = abAssignments.map(a => formatVariantForAnalytics(a.testId, a.variant));
+  
   const event: AnalyticsEvent = {
     eventType,
     timestamp: new Date().toISOString(),
@@ -100,6 +114,8 @@ export function trackEvent(
     properties: {
       ...properties,
       ab_test_variant: getCurrentABVariant(),
+      ab_experiments: experimentParticipations,
+      ab_experiment_count: experimentParticipations.length,
     },
     value,
   };
@@ -631,4 +647,56 @@ export function getSessionStats(): {
     averageSessionMinutes: parseInt(localStorage.getItem(`avg_session_${telegramId}`) || '0', 10),
     lastSessionAt: localStorage.getItem(`last_session_${telegramId}`),
   };
+}
+
+// ============================================================================
+// A/B TEST CONVERSION TRACKING
+// ============================================================================
+
+/**
+ * Track a conversion event for A/B test analysis
+ * Call this when a player completes a target action (e.g., purchase, level up)
+ */
+export function trackABTestConversion(
+  testId: string,
+  conversionEvent: AnalyticsEventType,
+  properties: Record<string, unknown> = {}
+): void {
+  // Record the conversion event with A/B test context
+  trackEvent(conversionEvent, {
+    ...properties,
+    ab_test_converted: true,
+    ab_test_id: testId,
+  });
+  
+  // Sync conversion to server
+  if (supabase) {
+    supabase.rpc('record_ab_test_conversion', {
+      p_telegram_id: telegramId,
+      p_test_id: testId,
+      p_conversion_event: conversionEvent,
+    }).catch(err => {
+      console.warn('[Analytics] Failed to record A/B conversion:', err);
+    });
+  }
+  
+  if (import.meta.env.DEV) {
+    console.log(`[A/B Testing] Conversion tracked for ${testId}:`, conversionEvent);
+  }
+}
+
+/**
+ * Get summary of all A/B test participations
+ */
+export function getABTestParticipationSummary(): {
+  testId: string;
+  variant: string;
+  assignedAt: string;
+}[] {
+  const assignments = getAllABTestAssignments(telegramId);
+  return assignments.map(a => ({
+    testId: a.testId,
+    variant: a.variant,
+    assignedAt: a.assignedAt,
+  }));
 }

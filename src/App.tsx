@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useGame, type SyncStatus } from './hooks/useGame';
+import { useBattlePass } from './hooks/useBattlePass';
 import { TapArea } from './components/TapArea';
 import { GeneratorShop } from './components/GeneratorShop';
 import { TapUpgrade } from './components/StatsPanel';
@@ -13,6 +14,7 @@ import { AdsGramButton } from './components/AdsGramButton';
 import { PrestigeButton, MuseumLaboratory } from './components/PrestigeSystem';
 import { SessionAdModal, ChestAdModal, EnergyRestoreAdButton, useSessionAdTrigger, useChestAdTrigger } from './components/AdSystem';
 import { OfflineRewardModal } from './components/OfflineRewardModal';
+import { BattlePassPanel } from './components/BattlePassPanel';
 import { EPOCHS, ARTIFACTS, getEpochById } from './data/epochs';
 import { initTelegramMiniApp, hapticImpact, hapticNotification, getTelegramWebApp, getTelegramUserId, getRawInitData } from './lib/telegram';
 import { rpcTrackSession } from './lib/rpc';
@@ -68,11 +70,35 @@ function App() {
     // Energy System
     getEnergyMultiplier,
     recordSessionAdWatched,
+    registerBattlePassXpCallback,
   } = useGame();
+
+  // Battle Pass hook
+  const {
+    currentSeason,
+    seasonState,
+    seasonProgress,
+    addSeasonXp,
+    claimTierReward,
+    purchasePremium,
+  } = useBattlePass();
+
+  // Register XP callback with game hook
+  useEffect(() => {
+    if (registerBattlePassXpCallback) {
+      registerBattlePassXpCallback(addSeasonXp);
+    }
+    return () => {
+      if (registerBattlePassXpCallback) {
+        registerBattlePassXpCallback(null);
+      }
+    };
+  }, [registerBattlePassXpCallback, addSeasonXp]);
 
   const [activeTab, setActiveTab] = useState<Tab>('shop');
   const [showGacha, setShowGacha] = useState(false);
   const [showEpochModal, setShowEpochModal] = useState(false);
+  const [showBattlePass, setShowBattlePass] = useState(false);
   const [showError, setShowError] = useState<string | null>(null);
   const [purchasingBooster, setPurchasingBooster] = useState<string | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
@@ -170,7 +196,7 @@ function App() {
   };
 
   const completedArtifacts = state.completedArtifacts?.length || 0;
-  // Energy multiplier (x5 if energy > 0 and prestige >= 1)
+  // Energy multiplier (1x to 5x based on energy level, for prestige >= 1)
   const energyMultiplier = getEnergyMultiplier ? getEnergyMultiplier() : 1;
 
   // Prestige research XP bonus
@@ -749,6 +775,17 @@ function App() {
                 />
               </div>
 
+              {/* Battle Pass Button */}
+              {currentSeason && (
+                <button
+                  onClick={() => setShowBattlePass(true)}
+                  className="w-full mb-4 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
+                >
+                  <Trophy className="w-5 h-5" />
+                  <span>Бойовий пропуск: {seasonProgress.currentTier}/{currentSeason.levelCount}</span>
+                </button>
+              )}
+
               {/* Energy Restore Ad (Prestige 1+ only) */}
               {(state.prestigeLevel || 0) >= 1 && (
                 <div className="mb-4">
@@ -1120,6 +1157,18 @@ function App() {
         />
       )}
 
+      {/* Battle Pass Modal */}
+      {showBattlePass && currentSeason && seasonState && (
+        <BattlePassModalContent
+          season={currentSeason}
+          state={seasonState}
+          progress={seasonProgress}
+          onClaimTier={(tier, track) => claimTierReward(tier, track)}
+          onPurchasePremium={purchasePremium}
+          onClose={() => setShowBattlePass(false)}
+        />
+      )}
+
       {/* Session Ad Modal — shown after 20 min of gameplay */}
       {shouldShowSessionAd && !showGacha && !showTutorial && (
         <SessionAdModal
@@ -1284,6 +1333,178 @@ function ActiveBoosterBadge({ label, endTime, color }: {
       {remaining && <span className="opacity-70">{remaining}</span>}
     </div>
   );
+}
+
+// Battle Pass Panel Modal
+function BattlePassModalContent({
+  season,
+  state,
+  progress,
+  onClaimTier,
+  onPurchasePremium,
+  onClose,
+}: {
+  season: NonNullable<ReturnType<typeof useBattlePass>['currentSeason']>;
+  state: NonNullable<ReturnType<typeof useBattlePass>['seasonState']>;
+  progress: ReturnType<typeof useBattlePass>['seasonProgress'];
+  onClaimTier: (tier: number, track: 'free' | 'premium') => void;
+  onPurchasePremium: () => void;
+  onClose: () => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<'free' | 'premium'>('free');
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="bg-gray-900 rounded-2xl w-full max-w-lg max-h-[90vh] flex flex-col">
+        {/* Header */}
+        <div className="p-4 border-b border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xl font-bold text-amber-400 flex items-center gap-2">
+              <Trophy className="w-6 h-6" />
+              {season.name.en}
+            </h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-lg">
+              <X className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
+          
+          {/* Season progress bar */}
+          <div className="mb-2">
+            <div className="flex justify-between text-sm text-gray-400 mb-1">
+              <span>Рівень {progress.currentTier}/{season.levelCount}</span>
+              <span>{formatNumber(state.seasonXp)} XP</span>
+            </div>
+            <div className="h-3 bg-gray-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all"
+                style={{ width: `${progress.progress * 100}%` }}
+              />
+            </div>
+          </div>
+
+          {/* Premium status */}
+          <div className="flex items-center justify-between mt-3">
+            <div className="text-sm">
+              {state.isPremium ? (
+                <span className="text-amber-400 font-semibold">⭐ Premium Active</span>
+              ) : (
+                <button
+                  onClick={onPurchasePremium}
+                  className="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                >
+                  ⭐ Купити Premium ({season.premiumPrice} ⭐)
+                </button>
+              )}
+            </div>
+            <div className="text-sm text-gray-400">
+              {Math.ceil((new Date(season.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))} днів залишилось
+            </div>
+          </div>
+        </div>
+
+        {/* Tab switcher */}
+        <div className="flex border-b border-gray-700">
+          <button
+            onClick={() => setActiveTab('free')}
+            className={`flex-1 py-3 font-semibold transition-colors ${activeTab === 'free' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-gray-400'}`}
+          >
+            Безкоштовний трек
+          </button>
+          <button
+            onClick={() => setActiveTab('premium')}
+            className={`flex-1 py-3 font-semibold transition-colors ${activeTab === 'premium' ? 'text-amber-400 border-b-2 border-amber-400' : 'text-gray-400'}`}
+          >
+            ⭐ Premium трек
+          </button>
+        </div>
+
+        {/* Rewards list */}
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-4">
+          <div className="space-y-2">
+            {season.freeRewards.map((reward) => {
+              const isUnlocked = state.seasonXp >= reward.xpRequired;
+              const isClaimed = state.claimedTiers.includes(reward.tier);
+              const showReward = activeTab === 'free' ? true : (state.isPremium && reward.premiumReward);
+              
+              if (activeTab === 'premium' && !state.isPremium) {
+                return (
+                  <div key={reward.tier} className="bg-gray-800/50 rounded-xl p-4 opacity-50">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center text-2xl">
+                        🔒
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-bold text-gray-400">Рівень {reward.tier}</div>
+                        <div className="text-sm text-gray-500">Потрібно {reward.xpRequired} XP</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={reward.tier}
+                  className={`rounded-xl p-4 transition-all ${isUnlocked ? 'bg-gray-800' : 'bg-gray-800/50 opacity-60'}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center text-2xl">
+                      {activeTab === 'free' ? getRewardEmoji(reward.freeReward) : (reward.premiumReward ? getRewardEmoji(reward.premiumReward) : '⭐')}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-bold">Рівень {reward.tier}</div>
+                      <div className="text-sm text-gray-400">
+                        {activeTab === 'free' ? getRewardText(reward.freeReward) : (reward.premiumReward ? getRewardText(reward.premiumReward) : '-')}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {reward.xpRequired} XP {isUnlocked ? '✓' : ''}
+                      </div>
+                    </div>
+                    {isUnlocked && !isClaimed && (
+                      <button
+                        onClick={() => onClaimTier(reward.tier, activeTab)}
+                        className="bg-amber-500 hover:bg-amber-400 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                      >
+                        Забрати
+                      </button>
+                    )}
+                    {isClaimed && (
+                      <div className="text-green-400 text-2xl">✓</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getRewardEmoji(reward: { type: string; [key: string]: unknown }): string {
+  switch (reward.type) {
+    case 'currency': return '💰';
+    case 'xp': return '⭐';
+    case 'booster': return '⚡';
+    case 'gacha_ticket': return '🎫';
+    case 'artifact_fragment': return '💎';
+    case 'cosmetic': return '👑';
+    default: return '🎁';
+  }
+}
+
+function getRewardText(reward: { type: string; [key: string]: unknown }): string {
+  switch (reward.type) {
+    case 'currency': return `${formatNumber(reward.amount as number)} 💰`;
+    case 'xp': return `${formatNumber(reward.amount as number)} XP`;
+    case 'booster': return `Бустер ${(reward.duration as number) / 3600000} год`;
+    case 'gacha_ticket': return `${reward.amount} 🎫`;
+    case 'artifact_fragment': return `${reward.amount} фрагмент(ів) ${reward.rarity}`;
+    case 'cosmetic': return `Косметика ${reward.cosmeticId}`;
+    default: return 'Нагорода';
+  }
 }
 
 export default App;

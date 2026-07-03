@@ -138,10 +138,12 @@ Deno.serve(async (req: Request) => {
 
     const validation = validateRequest(init_data);
     if (!validation.valid) {
+      console.warn(`HMAC validation failed for claim-ad-reward: ${validation.error}`);
       return jsonResponse({ error: validation.error }, 401);
     }
 
     if (validation.userId !== telegram_id) {
+      console.warn(`User ID mismatch in claim-ad-reward: expected ${validation.userId}, got ${telegram_id}`);
       return jsonResponse({ error: "User ID mismatch" }, 403);
     }
 

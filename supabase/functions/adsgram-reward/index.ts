@@ -11,14 +11,9 @@ const corsHeaders = {
 // AdsGram configuration
 const ADSGRAM_BLOCK_ID = '36787';
 
-/**
- * KNOWN SECURITY ISSUE: The AdsGram secret token is currently hardcoded.
- * This should be moved to Deno environment variables:
- * const ADSGRAM_SECRET = Deno.env.get("ADSGRAM_SECRET") ?? "";
- * 
- * TODO: Migrate to proper environment-based secret management
- */
-const ADSGRAM_SECRET = 'e73dc047768d42dba4d64432274c05c1';
+// AdsGram secret stored securely in environment variable (server-side only)
+// This secret is used to verify callbacks from AdsGram's servers (GET requests)
+const ADSGRAM_SECRET = Deno.env.get("ADSGRAM_SECRET") ?? "";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
@@ -262,6 +257,7 @@ async function handlePostCallback(body: { userid?: string; ad_id?: string; rewar
 
   const validation = validateRequest(init_data);
   if (!validation.valid) {
+    console.warn(`HMAC validation failed for adsgram-reward POST: ${validation.error}`);
     return jsonResponse({ error: validation.error }, 401);
   }
 
@@ -271,6 +267,7 @@ async function handlePostCallback(body: { userid?: string; ad_id?: string; rewar
   }
 
   if (validation.userId !== telegramId) {
+    console.warn(`User ID mismatch in adsgram-reward POST: expected ${validation.userId}, got ${telegramId}`);
     return jsonResponse({ error: "User ID mismatch" }, 403);
   }
 

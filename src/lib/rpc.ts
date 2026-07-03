@@ -75,6 +75,8 @@ export async function rpcOpenChest(
     icon: string;
     name: { ua: string; en: string };
   }>;
+  pity_state?: { pity_epic: number; pity_legendary: number };
+  pity_triggered?: { epic: boolean; legendary: boolean };
 }> {
   if (!supabase) return { ok: false, error: 'No Supabase connection' };
 
@@ -88,7 +90,12 @@ export async function rpcOpenChest(
 
     if (error) return { ok: false, error: error.message || 'Edge function error' };
 
-    return { ok: true, rewards: data?.rewards || [] };
+    return { 
+      ok: true, 
+      rewards: data?.rewards || [],
+      pity_state: data?.pity_state,
+      pity_triggered: data?.pity_triggered,
+    };
   } catch (e) {
     console.error('rpcOpenChest error:', e);
     return { ok: false, error: String(e) };

@@ -5,27 +5,16 @@
  * Block ID: 36787
  *
  * Reward: x3 XP multiplier for EXACTLY 30 minutes (does not extend)
+ *
+ * SECURITY NOTE: This module only handles ad DISPLAY. Reward verification
+ * is done server-side in the adsgram-reward edge function using init_data
+ * validation to prevent reward forgery.
  */
 
 import type { ShowPromiseResult } from '@adsgram/react';
 
 // AdsGram Block ID for reward ads
 export const ADSGRAM_BLOCK_ID = '36787';
-
-/**
- * KNOWN SECURITY ISSUE: The AdsGram secret token is currently hardcoded in both
- * the frontend and backend. This is a security risk because:
- * 1. The secret is visible in client-side JavaScript
- * 2. Users can extract and misuse the token
- *
- * PROPER FIX REQUIRED:
- * 1. Move secret to environment variables: VITE_ADSGRAM_SECRET (frontend)
- * 2. Use server-side environment variable for edge function
- * 3. Never expose secrets in client-side code
- *
- * TODO: Migrate to proper environment-based secret management
- */
-export const ADSGRAM_SECRET = 'e73dc047768d42dba4d64432274c05c1';
 
 // XP Boost configuration
 export const XP_BOOST_MULTIPLIER = 3;
@@ -81,10 +70,13 @@ export function initAdsgram(blockId: string = ADSGRAM_BLOCK_ID, debug = false): 
 
 /**
  * Grant XP boost via server
- * Server-side validation ensures boost cannot be forged
- * Includes AdsGram secret for verification
+ * Server-side validation using init_data ensures boost cannot be forged
+ * The init_data is validated on the server using HMAC verification
  */
-export async function grantXpBoostFromServer(telegramId: number): Promise<{ success: boolean; error?: string; alreadyActive?: boolean }> {
+export async function grantXpBoostFromServer(
+  telegramId: number,
+  initData: string
+): Promise<{ success: boolean; error?: string; alreadyActive?: boolean }> {
   try {
     const response = await fetch(getEdgeFunctionUrl(), {
       method: 'POST',
@@ -93,7 +85,7 @@ export async function grantXpBoostFromServer(telegramId: number): Promise<{ succ
         userid: telegramId.toString(),
         ad_id: `ad_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
         reward_type: 'xp_boost',
-        secret: ADSGRAM_SECRET,
+        init_data: initData,
       }),
     });
 
@@ -124,14 +116,15 @@ export async function grantXpBoostFromServer(telegramId: number): Promise<{ succ
  */
 export async function showRewardAd(
   controller: AdsgramController,
-  telegramId: number
+  telegramId: number,
+  initData: string
 ): Promise<AdShowResult> {
   try {
     const result = await controller.show();
 
     if (result.done) {
       // User watched ad till the end - grant reward via server
-      const grantResult = await grantXpBoostFromServer(telegramId);
+      const grantResult = await grantXpBoostFromServer(telegramId, initData);
 
       if (grantResult.success) {
         return {

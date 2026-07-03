@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Zap, Gift, AlertCircle, Loader2, RefreshCw } from 'lucide-react';
-import { getTelegramUserId } from '../lib/telegram';
+import { getTelegramUserId, getRawInitData } from '../lib/telegram';
 import { hapticImpact, hapticNotification } from '../lib/telegram';
 import {
   ADSGRAM_BLOCK_ID,
@@ -103,8 +103,15 @@ export function AdsGramButton({ activeBoosters, onBoostActivated }: AdsGramButto
     setError(null);
     hapticImpact('medium');
 
+    const initData = getRawInitData();
+    if (!initData) {
+      setError('Помилка авторизації');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const result: AdShowResult = await showRewardAd(controller, telegramId);
+      const result: AdShowResult = await showRewardAd(controller, telegramId, initData);
 
       if (result.success && result.boostActivated) {
         hapticNotification('success');

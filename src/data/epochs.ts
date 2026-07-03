@@ -12,7 +12,7 @@ const createGenerators = (templates: Array<{ id: string; icon: string; name: { u
     description: t.desc,
     baseCost: t.baseCost,
     baseProduction: t.baseProd,
-    costMultiplier: 1.15,
+    costMultiplier: 1.27,
     icon: t.icon,
   }));
 

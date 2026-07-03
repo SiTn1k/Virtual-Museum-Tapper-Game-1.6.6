@@ -173,6 +173,9 @@ export function GachaModal({
   const [primaryReward, setPrimaryReward] = useState<GachaReward | null>(null);
   const [errorMessage, setErrorMessage] = useState('');
   const [showParticles, setShowParticles] = useState(false);
+  // Pity system state (Phase 20)
+  const [pityState, setPityState] = useState<{ pity_epic: number; pity_legendary: number }>({ pity_epic: 0, pity_legendary: 0 });
+  const [pityTriggered, setPityTriggered] = useState<{ epic: boolean; legendary: boolean }>({ epic: false, legendary: false });
 
   const pendingRewardsRef = useRef<GachaReward[] | null>(null);
   const onServerRewardRef = useRef(onServerReward);
@@ -200,6 +203,7 @@ export function GachaModal({
     setPrimaryReward(null);
     setErrorMessage('');
     setShowParticles(false);
+    setPityTriggered({ epic: false, legendary: false }); // Reset pity triggered state
     setPhase('rolling');
 
     // Call server for the actual reward
@@ -224,6 +228,14 @@ export function GachaModal({
     pendingRewardsRef.current = result.rewards;
     setRewards(result.rewards);
     setPrimaryReward(result.rewards[0]);
+    
+    // Store pity state from server (Phase 20)
+    if (result.pity_state) {
+      setPityState(result.pity_state);
+    }
+    if (result.pity_triggered) {
+      setPityTriggered(result.pity_triggered);
+    }
   }, [phase, canAfford, hasArtifacts, onRoll, onRefund, gachaCost, epoch.id]);
 
   // Animation effect — shows rolling then reveals server result
@@ -419,6 +431,15 @@ export function GachaModal({
                 );
               })()}
 
+              {/* Phase 20: Pity notification */}
+              {(pityTriggered.epic || pityTriggered.legendary) && (
+                <div className={`mt-3 text-sm font-bold ${
+                  pityTriggered.legendary ? 'text-yellow-400' : 'text-purple-400'
+                }`}>
+                  🎉 {pityTriggered.legendary ? 'ГАРАНТІЯ ЛЕГЕНДАРНОГО!' : 'ГАРАНТІЯ ЕПІКУ!'} (Система Піті)
+                </div>
+              )}
+
               {/* Additional rewards if multiple */}
               {rewards.length > 1 && (
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -472,6 +493,27 @@ export function GachaModal({
                     Бонус епохи: +{getEpochRareBonus(EPOCHS.findIndex(e => e.id === epoch.id))}% рідкісних
                   </span>
                 )}
+                {/* Phase 20: Pity System Display */}
+                <div className="mt-2 pt-2 border-t border-gray-700/50 space-y-1">
+                  <div className="flex justify-center items-center gap-3">
+                    <span className={`${pityState.pity_epic >= 40 ? 'text-purple-400' : 'text-purple-400/70'}`}>
+                      🎰 Епік: {pityState.pity_epic}/50
+                    </span>
+                    <span className={`${pityState.pity_legendary >= 180 ? 'text-yellow-400' : 'text-yellow-400/70'}`}>
+                      👑 Легенда: {pityState.pity_legendary}/200
+                    </span>
+                  </div>
+                  {pityState.pity_epic >= 40 && (
+                    <div className="text-purple-400 font-medium animate-pulse">
+                      ⚡ Епік близько! {50 - pityState.pity_epic} скринь до гарантії
+                    </div>
+                  )}
+                  {pityState.pity_legendary >= 180 && (
+                    <div className="text-yellow-400 font-medium animate-pulse">
+                      ⚡ Легенда близько! {200 - pityState.pity_legendary} скринь до гарантії
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}

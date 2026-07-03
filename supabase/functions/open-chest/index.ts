@@ -35,8 +35,17 @@ const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
  * - Base: 1%
  * - +5% per "rare_artifact_chance" research level (max 10 levels = +50% = 1.5% total)
  *
+ * PITY SYSTEM (Phase 20):
+ * - 50th chest without Epic+: Guaranteed Epic or higher
+ * - 200th chest without Legendary: Guaranteed Legendary
+ * - Pity resets on each guaranteed drop
+ *
  * Rewards: 1-3 artifact fragments for a random artifact from current epoch
  */
+
+// Pity system constants
+const PITY_EPIC_THRESHOLD = 50;      // Guaranteed Epic+ after 50 chests
+const PITY_LEGENDARY_THRESHOLD = 200; // Guaranteed Legendary after 200 chests
 
 /**
  * Get epoch-based rare bonus percentage
@@ -263,22 +272,47 @@ function getRandomArtifact(epochId: string, rarity: string, prestigeLevel: numbe
  * @param rareArtifactChanceBonus - Bonus from prestige research
  * @param chestType - Type of chest being opened
  * @param epochIndex - 0-based index of the epoch for epoch-based bonuses (Phase 9)
+ * @param pityEpic - Current epic pity counter (chests since last Epic+)
+ * @param pityLegendary - Current legendary pity counter (chests since last Legendary)
  */
 function generateRewards(
   epochId: string,
   prestigeLevel: number,
   rareArtifactChanceBonus: number,
   chestType: "skychest" | "daily",
-  epochIndex: number = 0
-): ArtifactDrop[] {
+  epochIndex: number = 0,
+  pityEpic: number = 0,
+  pityLegendary: number = 0
+): { rewards: ArtifactDrop[]; pityUsed: { epic: boolean; legendary: boolean } } {
   const rewards: ArtifactDrop[] = [];
+  let pityUsed = { epic: false, legendary: false };
 
   // Skychest: 2-3 artifacts, Daily: 1 artifact
   const numArtifacts = chestType === "skychest" ? Math.floor(Math.random() * 2) + 2 : 1;
 
   for (let i = 0; i < numArtifacts; i++) {
-    // Pass epochIndex to rollRarity for epoch-based bonuses (Phase 9)
-    const rarity = rollRarity(prestigeLevel, rareArtifactChanceBonus, epochIndex);
+    let rarity: string;
+    
+    // PITY SYSTEM: Check pity before rolling
+    // Legendary pity takes priority over Epic pity (200 > 50)
+    if (pityLegendary >= PITY_LEGENDARY_THRESHOLD) {
+      rarity = "legendary";
+      pityUsed.legendary = true;
+    } else if (pityEpic >= PITY_EPIC_THRESHOLD) {
+      // Roll between Epic and Legendary (weighted)
+      const roll = Math.random() * 100;
+      if (roll < 70) {
+        rarity = "epic"; // 70% Epic, 30% Legendary on pity
+      } else {
+        rarity = "legendary";
+        pityUsed.legendary = true;
+      }
+      pityUsed.epic = true;
+    } else {
+      // Normal roll with epoch bonuses
+      rarity = rollRarity(prestigeLevel, rareArtifactChanceBonus, epochIndex);
+    }
+    
     const artifact = getRandomArtifact(epochId, rarity, prestigeLevel);
 
     if (artifact) {
@@ -301,7 +335,7 @@ function generateRewards(
     }
   }
 
-  return rewards;
+  return { rewards, pityUsed };
 }
 
 Deno.serve(async (req: Request) => {
@@ -324,10 +358,12 @@ Deno.serve(async (req: Request) => {
 
     const validation = validateRequest(init_data);
     if (!validation.valid) {
+      console.warn(`HMAC validation failed for open-chest: ${validation.error}`);
       return jsonResponse({ error: validation.error }, 401);
     }
 
     if (validation.userId !== telegram_id) {
+      console.warn(`User ID mismatch in open-chest: expected ${validation.userId}, got ${telegram_id}`);
       return jsonResponse({ error: "User ID mismatch" }, 403);
     }
 
@@ -344,10 +380,10 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 
-    // Fetch player state
+    // Fetch player state (include pity_state for Phase 20)
     const { data: player, error: fetchError } = await supabase
       .from("game_progress")
-      .select("currency, prestige_level, prestige_research, artifact_parts, artifact_levels, completed_artifacts, active_boosters")
+      .select("currency, prestige_level, prestige_research, artifact_parts, artifact_levels, completed_artifacts, active_boosters, pity_state")
       .eq("telegram_id", telegram_id)
       .maybeSingle();
 
@@ -380,8 +416,45 @@ Deno.serve(async (req: Request) => {
     // Apply +5% rare chance if chest bonus active
     const finalRareBonus = hasChestBonus ? rareArtifactChanceBonus + 5 : rareArtifactChanceBonus;
 
+    // Get pity state (initialize if not exists)
+    const pityState = (player.pity_state as { pity_epic: number; pity_legendary: number } | null) || {
+      pity_epic: 0,
+      pity_legendary: 0,
+    };
+
     // Generate rewards with epoch index for epoch-based bonuses (Phase 9)
-    const rewards = generateRewards(epoch_id, prestigeLevel, finalRareBonus, chest_type, epoch_index ?? 0);
+    // Pass pity counters to generateRewards
+    const { rewards, pityUsed } = generateRewards(
+      epoch_id,
+      prestigeLevel,
+      finalRareBonus,
+      chest_type,
+      epoch_index ?? 0,
+      pityState.pity_epic || 0,
+      pityState.pity_legendary || 0
+    );
+
+    // Update pity state based on rewards
+    // Check if any reward was Epic or higher
+    const hasEpicOrHigher = rewards.some(r => r.rarity === 'epic' || r.rarity === 'legendary' || r.rarity === 'secret');
+    const hasLegendary = rewards.some(r => r.rarity === 'legendary' || r.rarity === 'secret');
+
+    // Update pity counters
+    if (hasLegendary || pityUsed.legendary) {
+      // Reset legendary pity on Legendary drop or if pity was used for legendary
+      pityState.pity_legendary = 0;
+    } else {
+      // Increment legendary pity counter
+      pityState.pity_legendary = (pityState.pity_legendary || 0) + 1;
+    }
+
+    if (hasEpicOrHigher || pityUsed.epic) {
+      // Reset epic pity on Epic+ drop or if pity was used for epic
+      pityState.pity_epic = 0;
+    } else {
+      // Increment epic pity counter
+      pityState.pity_epic = (pityState.pity_epic || 0) + 1;
+    }
 
     // Update player's artifact parts
     const artifactParts = (player.artifact_parts as Record<string, number>) || {};
@@ -404,11 +477,12 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Update database (deduct currency + save artifacts + clear chest bonus if used)
+    // Update database (deduct currency + save artifacts + clear chest bonus if used + save pity state)
     const updateData: Record<string, unknown> = {
       artifact_parts: artifactParts,
       artifact_levels: artifactLevels,
       completed_artifacts: completedArtifacts,
+      pity_state: pityState, // Save updated pity state (Phase 20)
     };
 
     // Clear chest bonus if it was used
@@ -432,12 +506,14 @@ Deno.serve(async (req: Request) => {
       return jsonResponse({ error: "Failed to save rewards" }, 500);
     }
 
-    console.log(`Chest opened: user=${telegram_id}, epoch=${epoch_id}, type=${chest_type}, rewards=${rewards.length}`);
+    console.log(`Chest opened: user=${telegram_id}, epoch=${epoch_id}, type=${chest_type}, rewards=${rewards.length}, pityEpic=${pityState.pity_epic}, pityLegendary=${pityState.pity_legendary}`);
 
     return jsonResponse({
       success: true,
       rewards,
       chest_type: chest_type,
+      pity_state: pityState, // Return updated pity state for client display (Phase 20)
+      pity_triggered: pityUsed, // Indicate if pity was used for this roll
     });
   } catch (err) {
     console.error("Open chest error:", err);
