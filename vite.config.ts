@@ -7,4 +7,8 @@ export default defineConfig({
   optimizeDeps: {
     exclude: ['lucide-react'],
   },
+  build: {
+    // Don't auto-inject scripts - we control script order in index.html
+    injectScript: false,
+  },
 });

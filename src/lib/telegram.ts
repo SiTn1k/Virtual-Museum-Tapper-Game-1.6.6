@@ -72,6 +72,10 @@ export function getTelegramWebApp(): TelegramWebApp | null {
   if (typeof window !== 'undefined' && window.Telegram?.WebApp) {
     return window.Telegram.WebApp;
   }
+  // Log warning in production for debugging
+  if (import.meta.env.PROD) {
+    console.warn('Telegram WebApp not available. Make sure telegram-web-app.js is loaded.');
+  }
   return null;
 }
 
