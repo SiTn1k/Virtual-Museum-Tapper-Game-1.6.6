@@ -3,7 +3,7 @@
  * Manages daily tasks, check-in rewards, and streak system
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import type { GameState } from '../types/game';
 import {
   getTodayDateStr,
@@ -87,7 +87,9 @@ export function useDailyContent(): UseDailyContentReturn {
   /**
    * Calculate if player should show check-in modal
    */
-  const shouldShowCheckIn = lastLoginDate !== getTodayDateStr() && lastCheckIn !== getTodayDateStr();
+  const shouldShowCheckIn = useMemo(() => {
+    return lastLoginDate !== getTodayDateStr() && lastCheckIn !== getTodayDateStr();
+  }, [lastLoginDate, lastCheckIn]);
 
   /**
    * Claim a daily task reward
